@@ -1,0 +1,15 @@
+{
+    "ads": [
+        {
+            "url": "mitte.html",
+            "title": "Luxurious Lodge",
+            "location": "Mitte",
+            "rooms": 7
+        }, {
+            "url": "kreuzberg.html",
+            "title": "Cozy Cottage",
+            "location": "Kreuzberg",
+            "rooms": "Almost 1.5"
+        }
+    ]
+}

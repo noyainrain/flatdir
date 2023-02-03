@@ -1,0 +1,231 @@
+{% set description = directory.description.replace('{companies}', companies|length|string) %}
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width" />
+
+        <title>{{ directory.title }}</title>
+        <meta name="description" content="{{ description }}" />
+        <meta name="keywords" content="aggregator, flat, apartment" />
+        <meta name="theme-color" content="#8020df" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="{{ url }}" />
+        <meta property="og:title" content="{{ directory.title }}" />
+        <meta property="og:description" content="{{ description }}" />
+        <!--
+            Size as suggested by https://developers.facebook.com/docs/sharing/webmasters/images and
+            https://developer.twitter.com/en/docs/twitter-for-websites/cards/overview/summary-card-with-large-image
+        -->
+        <meta property="og:image" content="{{ url }}/images/social.png" />
+        <meta property="og:image:alt" content="{{ directory.title }} icon." />
+
+        <link rel="icon" href="images/icon.png" />
+
+        <style>
+            @import "fonts/400.css";
+            @import "fonts/600.css";
+
+            html {
+                color: #333;
+                font: medium / 1.5 "Noto Sans", sans-serif;
+                overflow-wrap: break-word;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            h1,
+            h2,
+            p,
+            ul,
+            summary,
+            aside {
+                padding: 0.5rem;
+                margin: unset;
+                font-size: unset;
+                font-weight: unset;
+            }
+
+            a:focus,
+            a:hover,
+            summary:focus,
+            summary:hover {
+                outline: unset;
+                background: #ccc;
+            }
+
+            h1,
+            h2 {
+                color: #330d59; /* Primary with 20% lightness */
+            }
+
+            a {
+                display: block;
+                color: unset;
+                text-decoration: unset;
+            }
+
+            p a {
+                display: inline;
+                color: #8020df;
+            }
+
+            p a:focus,
+            p a:hover {
+                background: unset;
+                text-decoration: underline;
+            }
+
+            summary {
+                cursor: pointer;
+                list-style: none;
+            }
+
+            summary::after {
+                content: "i";
+                color: #666;
+                font-size: 0.8125rem;
+                vertical-align: super;
+            }
+
+            aside {
+                color: #666;
+                font-size: 0.8125rem;
+            }
+
+            .tag {
+                display: inline-block;
+                max-width: 100%;
+                padding-inline: 0.75em;
+                border: 1px solid #fff;
+                border-radius: 0.75em;
+                background: #ccc;
+            }
+
+            body {
+                margin: unset;
+            }
+
+            body > * {
+                padding-inline: 0.5rem;
+            }
+
+            body > * > * {
+                max-width: 70ch;
+                margin-inline: auto;
+            }
+
+            header {
+                position: sticky;
+                top: 0;
+                background: #8020df;
+            }
+
+            header a:focus,
+            header a:hover {
+                background: #330d59;
+            }
+
+            header h1 {
+                color: #fff;
+                font-weight: 600;
+            }
+
+            .company {
+                display: inline-block;
+            }
+
+            .company a {
+                background: #ff9999;
+            }
+
+            .company-ok a {
+                background: #99ff99;
+            }
+
+            .company a:focus,
+            .company a:hover {
+                background: #ccc;
+            }
+
+            #ads {
+                padding-block: unset;
+            }
+
+            .ad {
+                display: block;
+                margin-block: 0.5rem;
+            }
+
+            .ad a {
+                border: 1px solid #ccc;
+                border-radius: 0.25rem;
+            }
+
+            .ad a:link h2 {
+                color: #8020df;
+            }
+
+            footer {
+                border-top: 1px solid #ccc;
+            }
+        </style>
+    </head>
+
+    <body>
+        <header>
+            <a href="">
+                <h1><img src="images/icon-mono.svg" alt="" /> {{ directory.title }}</h1>
+            </a>
+        </header>
+
+        <details>
+            <summary>{{ description }}</summary>
+            <ul>
+                {% for company in companies %}
+                    <li class="company {% if company.is_ok() %}company-ok{% endif %}">
+                        <a class="tag" href="{{ company.url }}" target="_blank">
+                            {{ company.host }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </details>
+
+        <ul id="ads">
+            {% for ad in ads|sort(reverse=True, attribute='time') %}
+                <li class="ad">
+                    <a href="{{ ad.url }}" target="_blank">
+                        <h2>{{ ad.title }}</h2>
+                        <ul>
+                            <li class="tag">{{ ad.location }}</li>
+                            <li class="tag">
+                                {{ '{:g}'.format(ad.rooms) }}
+                                {% if ad.rooms == 1 %}
+                                    room
+                                {% else %}
+                                    rooms
+                                {% endif %}
+                            </li>
+                        </ul>
+                        <aside>{{ '{:%d %b %Y}'.format(ad.time) }} from {{ ad.host }}</aside>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <footer>
+            <p>
+                Generated by
+                <a href="https://github.com/noyainrain/flatdir" target="_blank">flatdir</a> on
+                {{ '{:%d %b %Y, %H:%M}'.format(directory.now()) }}
+            </p>
+            {% if directory.extra %}
+                <p>{{ directory.extra|safe }}</p>
+            {% endif %}
+        </footer>
+    </body>
+</html>

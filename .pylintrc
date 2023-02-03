@@ -1,0 +1,18 @@
+[main]
+disable =
+    # Good design is best figured out by humans yet
+    design, too-many-lines, too-many-nested-blocks,
+    # Handled by mypy
+    classes, typecheck
+jobs = 0
+output-format = colorized
+
+[basic]
+# Remove length constraints (see
+# https://github.com/pylint-dev/pylint/blob/main/pylint/checkers/base/name_checker/naming_style.py)
+argument-rgx = ([^\W\dA-Z][^\WA-Z]*|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]*__)$
+class-rgx = [^\W\da-z][^\W_]*$
+attr-rgx = %(argument-rgx)s
+function-rgx = %(argument-rgx)s
+method-rgx = %(argument-rgx)s
+variable-rgx = %(argument-rgx)s
