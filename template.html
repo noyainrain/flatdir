@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Flat Directory</title>
+    </head>
+
+    <body>
+        <ul>
+            {% for ad in ads|sort(reverse=True,attribute='time,url') %}
+                <li>
+                    <a href="{{ ad.url }}" target="_blank">
+                        {{ ad.time.strftime('%d %b %Y') }}, {{ ad.location }}: {{ad.title}} {{ ad.rooms }} ({{ ad.host }})
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <aside>
+            Sources:
+            {% for company in companies %}
+                <a href="{{ company.url }}" target="_blank">{{ company.host }}</a>
+            {% endfor %}
+        </aside>
+    </body>
+</html>
