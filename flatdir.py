@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from http.client import HTTPResponse
+import json
 import logging
 from logging import getLogger
 from pathlib import Path
@@ -26,7 +27,7 @@ class Broker:
         self.url = url
         self.host = urlsplit(url).hostname
         if not self.host:
-            raise ValueError('TODO')
+            raise ValueError(f'Bad URL {url}')
         self.node = node
         self.link_node = link_node
         self.title_node = title_node
@@ -38,59 +39,88 @@ class Broker:
         """TODO."""
         logger = getLogger(__name__)
 
-        path = Path(f'data/{self.host}.html')
+        def _get_mtime(path: Path) -> datetime | None:
+            try:
+                return datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
+            except FileNotFoundError:
+                return None
+
+        ext = 'json'
+        path = Path(f'data/{self.host}.{ext}')
+        mtime = _get_mtime(path)
+        if not mtime:
+            ext = 'html'
+            path = Path(f'data/{self.host}.{ext}')
+            mtime = _get_mtime(path)
 
         now = datetime.now(timezone.utc)
-        try:
-            mtime = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
-        except FileNotFoundError:
-            mtime = None
-
         if not mtime or now - mtime > timedelta(minutes=60):
+            with cast(HTTPResponse, urlopen(self.url)) as response:
+                data = response.read()
+
+            ext = 'html'
+            if response.getheader('Content-Type') == 'application/json':
+                ext = 'json'
+
+            path = Path(f'data/{self.host}.{ext}')
             with path.open('wb') as fw:
-                with cast(HTTPResponse, urlopen(self.url)) as w:
-                    fw.write(w.read())
+                fw.write(data)
             logger.info('Fetched %s', self.url)
 
         with path.open('rb') as f:
-            tree = html5lib.parse(f, namespaceHTMLElements=False)
+            data = f.read()
 
-        def find_node(elem: Element, path: str) -> Element:
-            node = elem.find(path)
-            if node is None:
-                raise LookupError(path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>")
-            return node
+        if ext == 'json':
+            result = json.loads(data)
+            items = result[self.node]
+            ads = [
+                Ad(
+                    urljoin(self.url, item[self.link_node]),
+                    item[self.title_node],
+                    item[self.location_node],
+                    item[self.rooms_node],
+                    datetime.now(timezone.utc))
+                for item in items]
 
-        def select(elem: Element, path: str) -> str:
-            mode = 'text'
-            if path.endswith('/tail()'):
-                mode = 'tail'
-                path = path[:-7]
+        else:
+            tree = html5lib.parse(data, namespaceHTMLElements=False)
 
-            node = elem.find(path)
-            if node is None:
-                raise LookupError(path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>")
+            def find_node(elem: Element, path: str) -> Element:
+                node = elem.find(path)
+                if node is None:
+                    raise LookupError(path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>")
+                return node
 
-            if mode == 'tail':
-                return node.tail or ''
-            return node.text or ''
+            def select(elem: Element, path: str) -> str:
+                mode = 'text'
+                if path.endswith('/tail()'):
+                    mode = 'tail'
+                    path = path[:-7]
 
-        nodes = tree.findall(self.node)
-        ads = [
-            Ad(
-                urljoin(self.url, find_node(node, self.link_node).get('href')),
-                (find_node(node, self.title_node).text or '?').strip(),
-                (find_node(node, self.location_node).text or '?').strip(),
-                # int((find_node(node, self.rooms_node).tail or '').strip() or '0'),
-                # (find_node(node, self.rooms_node).tail or '').strip() or '?',
-                select(node, self.rooms_node).strip() or '',
-                datetime.now(timezone.utc))
-            for node in nodes]
+                node = elem.find(path)
+                if node is None:
+                    raise LookupError(path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>")
+
+                if mode == 'tail':
+                    return node.tail or ''
+                return node.text or ''
+
+            nodes = tree.findall(self.node)
+            ads = [
+                Ad(
+                    urljoin(self.url, find_node(node, self.link_node).get('href')),
+                    (find_node(node, self.title_node).text or '?').strip(),
+                    (find_node(node, self.location_node).text or '?').strip(),
+                    # int((find_node(node, self.rooms_node).tail or '').strip() or '0'),
+                    # (find_node(node, self.rooms_node).tail or '').strip() or '?',
+                    select(node, self.rooms_node).strip() or '',
+                    datetime.now(timezone.utc))
+                for node in nodes]
 
         ads = [ad for ad in ads if ad.rooms]
-
         if self.location_filter:
             ads = [ad for ad in ads if self.location_filter in ad.location]
+
         #for ad in ads:
         #    print('AD ROOMS', ad.rooms)
 
@@ -147,18 +177,19 @@ class Ad:
     def __post_init__(self) -> None:
         self.host = urlsplit(self.url).hostname
         if not self.host:
-            raise ValueError('TODO')
+            raise ValueError(f'Bad URL {self.url}')
 
+# TODO rename Company()
 BROKERS = [
     # Brokers
-    Broker(
-        'https://www.schacher-immobilien.de/angebote/wohnungen/?mt=67555823520346',
-        ".//*[@class='listEntry listEntryClickable listEntryObject-immoobject listEntryObject-immoobject_var']",
-        'div/div[2]/div[2]/a',
-        'div/div[2]/div[2]/a',
-        'div/div[2]/div',
-        '.',
-        location_filter='Berlin'),
+    #Broker(
+    #    'https://www.schacher-immobilien.de/angebote/wohnungen/?mt=67555823520346',
+    #    ".//*[@class='listEntry listEntryClickable listEntryObject-immoobject listEntryObject-immoobject_var']",
+    #    'div/div[2]/div[2]/a',
+    #    'div/div[2]/div[2]/a',
+    #    'div/div[2]/div',
+    #    '.',
+    #    location_filter='Berlin'),
 
     Broker(
         'https://werneburg-immobilien.de/immobilien/immobilien-vermarktungsart/miete/',
@@ -187,13 +218,49 @@ BROKERS = [
         'div/div[4]/div[2]'),
 
     Broker(
+        url='https://www.gesobau.de/mieten/wohnungssuche.html',
+        # node=".//div[@class='list_item']",
+        # node=".//div[@data-id]",
+        node=".//div[@id='tx-openimmo-6329']/div[2]/div[1]/div/div[1]/div",
+        link_node='div/div/h3/a',
+        title_node='div/div/h3/a',
+        location_node='div/div/div[1]',
+        rooms_node='div/div/div[2]/div[3]'
+    ),
+
+    Broker(
+        'https://www.howoge.de/?type=999&tx_howsite_json_list[action]=immoList',
+        'immoobjects',
+        'link',
+        'title',
+        'district',
+        'rooms'
+        # 'https://www.howoge.de/wohnungen-gewerbe/wohnungssuche.html',
+        #".//div[@class='flat-single']",
+        #'div[2]/div[3]/a',
+        #'div[2]/div[3]/a',
+        #'div[2]/div[2]',
+        #'div[2]/div[4]/div/div/div[3]/div[2]'
+    ),
+
+    Broker(
+        url='https://www.kurtzke-immobilien.de/objekttyp/mietwohnung/',
+        node=".//div[@class='item-listing-wrap hz-item-gallery-js card']",
+        link_node='div/div/div[2]/h2/a',
+        title_node='div/div/div[2]/h2/a',
+        location_node='div/div/div[2]/address',
+        rooms_node='div/div/div[2]/ul/li/span[2]'
+    ),
+
+    Broker(
         'https://www.livinginberlin.de/angebote/mieten',
         ".//div[@class='uk-container uk-margin-large-top uk-margin-medium-bottom']/div/div",
         'div/div/a',
         'div/div[2]/p',
         'div/div[2]/h3',
         'div/div[2]/span/tail()',
-        location_filter='Berlin')
+        location_filter='Berlin'
+    )
 ]
 
 # request -> HTML
