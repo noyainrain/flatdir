@@ -3,24 +3,171 @@
 <html>
     <head>
         <title>Flat Directory</title>
+
+        <link rel="stylesheet" href="node_modules/@fontsource/noto-sans/400.css" />
+        <link rel="stylesheet" href="node_modules/@fontsource/noto-sans/700.css" />
+
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+
+            html {
+                font: medium / 1.5 "Noto Sans";
+                color: #333;
+            }
+
+            body {
+                margin: unset;
+            }
+
+            h1,
+            h2,
+            p,
+            aside,
+            summary,
+            ul {
+                font-size: 1rem;
+                margin: unset;
+                padding: 0.5rem;
+            }
+
+            .ad a {
+                display: block;
+                font-family: "Noto Sans";
+                color: unset;
+                text-decoration: unset;
+                /*background: white;*/
+            }
+
+            /*a:hover {
+                background: #ddd;
+            }*/
+
+            /*.ad a:visited {
+                color: #888;
+                color: unset;
+            }*/
+
+            h1,
+            h2 {
+                font-weight: normal;
+                color: #330066;
+            }
+
+            a:link h2 {
+                color: #8000ff;
+            }
+
+            /*a:visited h2 {
+                color: unset;
+            }*/
+
+            ul {
+                padding-left: 1.5rem;
+            }
+
+            /*h2 {
+                border-bottom: 1px solid #ddd;
+            }*/
+
+            a:visited h2 {
+                font-weight: normal;
+            }
+
+            header {
+                border-bottom: 1px solid #ddd;
+                padding-inline: 0.5rem;
+            }
+
+            #ads {
+                margin: unset;
+                padding: unset;
+                padding-inline: 0.5rem;
+            }
+
+            .ad {
+                display: block;
+                border: 1px solid #ddd;
+                border-radius: 0.25rem;
+                margin: 0.5rem;
+            }
+
+            aside {
+                font-size: 0.875rem;
+                font-size: 0.8125rem;
+                color: #888;
+            }
+
+            .content {
+                margin-inline: auto;
+                max-width: 70ch;
+            }
+
+            .outer {
+                padding-inline: 0.5rem;
+            }
+
+            .tags span {
+                display: inline-block;
+                background: #ddd;
+                border-radius: 0.25rem;
+                padding-inline: 0.25rem;
+            }
+
+            summary {
+                list-style: none;
+            }
+
+            details {
+                cursor: pointer;
+            }
+
+            #companies {
+                text-decoration: underline;
+            }
+        </style>
     </head>
 
     <body>
-        <ul>
+        <header class="outer"><h1 class="content">Berlin Flat Directory</h1></header>
+
+        <!--<p></p>-->
+
+        <div class="outer">
+            <details class="content">
+                <summary>
+                    Currently available flats in Berlin from <span id="companies">{{ companies|length }} companies</span>.
+                </summary>
+                <ul>
+                    {% for company in companies %}
+                        <li>
+                            <a href="{{ company.url }}" target="_blank">{{ company.host }}</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </details>
+        </div>
+
+        <ul id="ads">
             {% for ad in ads|sort(reverse=True,attribute='time,url') %}
-                <li>
+                <li class="ad content">
                     <a href="{{ ad.url }}" target="_blank">
-                        {{ ad.time.strftime('%d %b %Y') }}, {{ ad.location }}: {{ad.title}} {{ ad.rooms }} ({{ ad.host }})
+                        <h2>{{ ad.title }}</h2>
+                        <p class="tags">
+                            <span>{{ ad.location }}</span>
+                            <span>{{ ad.rooms }} rooms</span>
+                        </p>
+                        <aside>
+                            {{ ad.time.strftime('%d %b %Y') }} from {{ ad.host }}
+                        </aside>
+                        <!--<dl>
+                            <dt>Location</dt><dd>{{ ad.location }}</dd>
+                            <dt>Rooms</dt><dd>{{ ad.rooms }}</dd>
+                        </dl>-->
                     </a>
                 </li>
             {% endfor %}
         </ul>
-
-        <aside>
-            Sources:
-            {% for company in companies %}
-                <a href="{{ company.url }}" target="_blank">{{ company.host }}</a>
-            {% endfor %}
-        </aside>
     </body>
 </html>
