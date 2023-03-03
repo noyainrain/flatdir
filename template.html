@@ -2,10 +2,16 @@
 
 <html>
     <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width" />
+        <meta name="theme-color" content="#8020df" />
+
         <title>Flat Directory</title>
 
         <link rel="stylesheet" href="node_modules/@fontsource/noto-sans/400.css" />
-        <link rel="stylesheet" href="node_modules/@fontsource/noto-sans/700.css" />
+        <link rel="stylesheet" href="node_modules/@fontsource/noto-sans/600.css" />
+
+        <link rel="icon" href="icon.png" />
 
         <style>
             * {
@@ -15,6 +21,7 @@
             html {
                 font: medium / 1.5 "Noto Sans";
                 color: #333;
+                overflow-wrap: break-word;
             }
 
             body {
@@ -32,16 +39,59 @@
                 padding: 0.5rem;
             }
 
+            a {
+                display: block;
+                text-decoration: none;
+                color: #8020df;
+            }
+
+            a:focus,
+            a:hover,
+            summary:focus,
+            summary:hover {
+                background: #ccc;
+                /*background: #8020df;
+                color: white;*/
+                outline: none;
+            }
+
+            header a:focus,
+            header a:hover {
+                background: #330d59;
+            }
+
+            a:focus h1,
+            a:hover h1,
+            a:focus h2,
+            a:hover h2,
+            a:focus aside,
+            a:hover aside {
+                /*color: white;*/
+            }
+
+            a:focus .tags span,
+            a:hover .tags span {
+                /*background: #330d59;
+                color: white;*/
+            }
+
             .ad a {
                 display: block;
+                border: 1px solid #ccc;
+                border-radius: 0.25rem;
                 font-family: "Noto Sans";
                 color: unset;
                 text-decoration: unset;
                 /*background: white;*/
             }
 
+            .ad a:focus,
+            .ad a:hover {
+                border-color: white;
+            }
+
             /*a:hover {
-                background: #ddd;
+                background: #ccc;
             }*/
 
             /*.ad a:visited {
@@ -52,11 +102,18 @@
             h1,
             h2 {
                 font-weight: normal;
-                color: #330066;
+                /*color: #330d59;
+                color: #330a5c;
+                color: #330066;*/
+                color: #330d59;
             }
 
             a:link h2 {
+                /*color: #731dc8;
+                color: #801ae5;
+                color: #7317ce;*/
                 color: #8000ff;
+                color: #8020df;
             }
 
             /*a:visited h2 {
@@ -68,16 +125,30 @@
             }
 
             /*h2 {
-                border-bottom: 1px solid #ddd;
+                border-bottom: 1px solid #ccc;
             }*/
 
             a:visited h2 {
                 font-weight: normal;
             }
 
+            body {
+                overflow: scroll;
+            }
+
             header {
-                border-bottom: 1px solid #ddd;
+                /*border-bottom: 1px solid #ccc;*/
                 padding-inline: 0.5rem;
+                top: 0;
+                position: sticky;
+                background: white;
+                background: #8020df;
+            }
+
+            header h1 {
+                font-weight: bold;
+                font-weight: 600;
+                color: white;
             }
 
             #ads {
@@ -88,15 +159,13 @@
 
             .ad {
                 display: block;
-                border: 1px solid #ddd;
-                border-radius: 0.25rem;
                 margin: 0.5rem;
             }
 
             aside {
                 font-size: 0.875rem;
                 font-size: 0.8125rem;
-                color: #888;
+                color: #666;
             }
 
             .content {
@@ -110,16 +179,16 @@
 
             .tags span {
                 display: inline-block;
-                background: #ddd;
+                background: #ccc;
+                outline: 1px solid white;
                 border-radius: 0.25rem;
                 padding-inline: 0.25rem;
+                border-radius: 0.75rem;
+                padding-inline: 0.75rem;
             }
 
             summary {
                 list-style: none;
-            }
-
-            details {
                 cursor: pointer;
             }
 
@@ -130,7 +199,9 @@
     </head>
 
     <body>
-        <header class="outer"><h1 class="content">Berlin Flat Directory</h1></header>
+        <header class="outer">
+            <a class="content" href=""><h1><!--<img src="icon.png" />--> Berlin Flat Directory</h1></a>
+        </header>
 
         <!--<p></p>-->
 
