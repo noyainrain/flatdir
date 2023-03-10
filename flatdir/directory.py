@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from http.client import HTTPResponse
 import json
-import logging
 from logging import getLogger
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
@@ -17,8 +16,10 @@ from typing import cast
 from xml.etree.ElementTree import Element
 
 import html5lib
-from jinja2 import Environment, FileSystemLoader
+from html5lib import HTMLParser
+from html5lib.html5parser import ParseError
 
+# TODO rename to Company
 class Broker:
     """TODO."""
 
@@ -84,6 +85,11 @@ class Broker:
 
         else:
             tree = html5lib.parse(data, namespaceHTMLElements=False)
+            # Strict parsing fails for 6 of 7 companies lol ;)
+            #try:
+            #    tree = HTMLParser(strict=True, namespaceHTMLElements=False).parse(data)
+            #except ParseError as e:
+            #    raise ValueError('Bad HTML') from e
 
             def find_node(elem: Element, path: str) -> Element:
                 node = elem.find(path)
@@ -269,26 +275,3 @@ BROKERS = [
 # -
 # read
 # generate
-
-def main() -> None:
-    """TODO."""
-    logging.basicConfig(level=logging.INFO)
-    logger = getLogger(__name__)
-
-    Path('data').mkdir(exist_ok=True)
-
-    ads = []
-    for broker in BROKERS:
-        broker.update()
-        ads += broker.get_ads()
-
-    loader = FileSystemLoader('.')
-    env = Environment(loader=loader)
-    template = env.get_template('template.html')
-    with Path('index.html').open('w', encoding='utf-8') as f:
-        f.write(template.render(ads=ads, companies=BROKERS))
-
-    logger.info('Generated index.html')
-
-if __name__ == '__main__':
-    main()
