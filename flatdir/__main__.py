@@ -6,41 +6,44 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
-from .directory import BROKERS
+from .directory import Directory
+from .companies import COMPANIES
 
-from .util import ColorFormatter
+from .util import ColorFormatter, color_stream_handler
 
 def main() -> None:
     """TODO."""
 
-    handler = StreamHandler()
-    handler.setFormatter(ColorFormatter('%(levelname)s:%(name)s:%(message)s'))
-    logging.basicConfig(level=logging.INFO, handlers=[handler])
-
-    # logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(levelname)s %(name)s: %(message)s')
+    #logging.basicConfig(
+    #    level=logging.DEBUG,
+    #    handlers=[color_stream_handler(fmt='%(asctime)s %(levelname)s %(name)s: %(message)s')])
     logger = getLogger(__name__)
 
-    Path('data').mkdir(exist_ok=True)
+    logger.debug('Fetched document')
+    logger.info('Updated ads')
+    logger.warning('Unknown configuration key')
+    logger.error('Failed to fetch document')
+    try:
+        raise ValueError()
+    except ValueError:
+        logger.exception('Unhandled error')
+    logger.critical('Failed to access data directory')
+    return
 
-    ads = []
-    for broker in BROKERS:
-        try:
-            broker.update()
-        except OSError as e:
-            logger.error('Failed to communicate with %s (%s)', broker.host, e)
-        except ValueError as e:
-            logger.error('Bad HTML for %s (%s)', broker.host, e.__cause__)
-        except LookupError as e:
-            logger.error('Failed parse flat ad of %s (%s)', broker.host, e)
-        except SyntaxError as e:
-            logger.error('Bad path for %s (%s)', broker.host, e)
-        ads += broker.get_ads()
+    data_path = Path('data')
+    data_path.mkdir(exist_ok=True)
+
+    directory = Directory(COMPANIES, data_path=data_path)
+    directory.update()
+    ads = directory.get_ads()
 
     loader = FileSystemLoader('.')
     env = Environment(loader=loader)
     template = env.get_template('template.html')
     with Path('index.html').open('w', encoding='utf-8') as f:
-        f.write(template.render(ads=ads, companies=BROKERS))
+        f.write(template.render(ads=ads, companies=COMPANIES))
 
     logger.info('Generated index.html')
 

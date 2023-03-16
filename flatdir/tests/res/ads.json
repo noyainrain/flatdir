@@ -1,0 +1,13 @@
+{"flats": [
+    {
+        "title": "Foobar",
+        "location": "Kreuzberg",
+        "rooms": 4,
+        "url": "foobar.html"
+    }, {
+        "title": "Oink",
+        "location": "Mitte",
+        "rooms": 2,
+        "url": "oink.html"
+    }
+]}

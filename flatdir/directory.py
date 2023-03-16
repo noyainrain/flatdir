@@ -19,8 +19,7 @@ import html5lib
 from html5lib import HTMLParser
 from html5lib.html5parser import ParseError
 
-# TODO rename to Company
-class Broker:
+class Company:
     """TODO."""
 
     def __init__(self, url: str, node: str, link_node: str, title_node: str, location_node: str,
@@ -36,6 +35,29 @@ class Broker:
         self.rooms_node = rooms_node
         self.location_filter = location_filter
 
+        self._directory: Directory | None = None
+
+    @property
+    def directory(self) -> Directory:
+        """TODO."""
+        if not self._directory:
+            raise ValueError('Unset directory')
+        return self._directory
+
+    @directory.setter
+    def directory(self, value: Directory) -> None:
+        if self._directory:
+            raise ValueError('Already set directory')
+        self._directory = value
+
+    def _parse_html(self, data: bytes) -> list[Ad]:
+        # TODO
+        return []
+
+    def _parse_json(self, data: bytes) -> list[Ad]:
+        # TODO
+        return []
+
     def query(self) -> list[Ad]:
         """TODO."""
         logger = getLogger(__name__)
@@ -46,12 +68,24 @@ class Broker:
             except FileNotFoundError:
                 return None
 
+        # TODO just remove ext here, think like: if we had a method get_cache, what would it return:
+        # the path and the modified time, but not ext, because that can be extracted
+        # or even better like get_mtime_fallback_to_multiple_files(file1, file2, ...):
+        #cache_time = None
+        #paths = (self.director.data_path / f'{self.host}.json', self.directory.data_path / f'{self.host}.html')
+        #for cache_path in paths:
+        #    try:
+        #        cache_time = ...
+        #        break
+        #    except FileNotFoundError:
+        #        pass
+
         ext = 'json'
-        path = Path(f'data/{self.host}.{ext}')
+        path = self.directory.data_path / f'{self.host}.{ext}'
         mtime = _get_mtime(path)
         if not mtime:
             ext = 'html'
-            path = Path(f'data/{self.host}.{ext}')
+            path = self.directory.data_path / f'{self.host}.{ext}'
             mtime = _get_mtime(path)
 
         now = datetime.now(timezone.utc)
@@ -63,7 +97,7 @@ class Broker:
             if response.getheader('Content-Type') == 'application/json':
                 ext = 'json'
 
-            path = Path(f'data/{self.host}.{ext}')
+            path = self.directory.data_path / f'{self.host}.{ext}'
             with path.open('wb') as fw:
                 fw.write(data)
             logger.info('Fetched %s', self.url)
@@ -72,14 +106,38 @@ class Broker:
             data = f.read()
 
         if ext == 'json':
-            result = json.loads(data)
-            items = result[self.node]
+            # TODO if this fails - validation error for encoding or not a dict
+            result = cast(object, json.loads(data))
+            assert isinstance(result, dict)
+
+            def lookup(data: dict[str, object], path: str, typ: type | tuple[type] = str) -> str:
+                try:
+                    value = data[path]
+                except KeyError:
+                    raise LookupError(path) from None
+                if not isinstance(value, typ):
+                    raise LookupError(f'wrong type {type(value).__name__} for {path}')
+                return value
+
+            item_data = lookup(result, self.node, typ=list)
+            for item in item_data:
+                if not isinstance(item, dict):
+                    raise LookupError('TODO')
+            items = cast(list[dict[str, object]], item_data)
+            ## TODO (its okay to parse from data: object because its internal method)
+            #def parse_ad(data: object) -> None:
+            #def extract_ad(data: object) -> None:
+            #    pass
+
             ads = [
                 Ad(
-                    urljoin(self.url, item[self.link_node]),
-                    item[self.title_node],
-                    item[self.location_node],
-                    item[self.rooms_node],
+                    # float, int, bool
+                    # None
+                    # {}, [] => [3, 'lol', True]
+                    urljoin(self.url, lookup(item, self.link_node)),
+                    lookup(item, self.title_node) or '?',
+                    lookup(item, self.location_node),
+                    str(lookup(item, self.rooms_node, (str, int))),
                     datetime.now(timezone.utc))
                 for item in items]
 
@@ -185,89 +243,48 @@ class Ad:
         if not self.host:
             raise ValueError(f'Bad URL {self.url}')
 
-# TODO rename Company()
-BROKERS = [
-    # Brokers
-    #Broker(
-    #    'https://www.schacher-immobilien.de/angebote/wohnungen/?mt=67555823520346',
-    #    ".//*[@class='listEntry listEntryClickable listEntryObject-immoobject listEntryObject-immoobject_var']",
-    #    'div/div[2]/div[2]/a',
-    #    'div/div[2]/div[2]/a',
-    #    'div/div[2]/div',
-    #    '.',
-    #    location_filter='Berlin'),
+from os import PathLike
 
-    Broker(
-        'https://werneburg-immobilien.de/immobilien/immobilien-vermarktungsart/miete/',
-        ".//div[@class='property col-sm-6 col-md-4']",
-        'div/div[2]/h3/a',
-        'div/div[2]/h3/a',
-        'div/div[2]/div',
-        'div/div[2]/div[2]/div[2]/div[2]',
-        location_filter='Berlin'),
+class Directory:
+    """Directory of available flats from different real estate companies.
 
-    Broker(
-        'https://www.homesk.de/Rent/RentalFlats',
-        ".//a[@class='tile tile-sm-640px-480px tile-md-960px-480px tile-lg-1280px-480px']",
-        '.',
-        'div/div/div[2]/div/div/div/div/h3',
-        'div/div/div[2]/div/div/div/div/p',
-        'div/div/div[2]/div/div/div/div[2]/div/div/h4'),
+    .. attribute:: companies
 
-    # Property managers
-    Broker(
-        'https://www.berlinhaus.com/suchergebnisse/?filter_search_action[]=wohnen&advanced_city=berlin&zimmeranzahl-ab=1',
-        ".//div[@class='col-md-12 listing_wrapper']",
-        'div/h4/a',
-        'div/h4/a',
-        'div/div[2]/a',
-        'div/div[4]/div[2]'),
+       Source real estate companies.
 
-    Broker(
-        url='https://www.gesobau.de/mieten/wohnungssuche.html',
-        # node=".//div[@class='list_item']",
-        # node=".//div[@data-id]",
-        node=".//div[@id='tx-openimmo-6329']/div[2]/div[1]/div/div[1]/div",
-        link_node='div/div/h3/a',
-        title_node='div/div/h3/a',
-        location_node='div/div/div[1]',
-        rooms_node='div/div/div[2]/div[3]'
-    ),
+    .. attribute:: data_directory
 
-    Broker(
-        'https://www.howoge.de/?type=999&tx_howsite_json_list[action]=immoList',
-        'immoobjects',
-        'link',
-        'title',
-        'district',
-        'rooms'
-        # 'https://www.howoge.de/wohnungen-gewerbe/wohnungssuche.html',
-        #".//div[@class='flat-single']",
-        #'div[2]/div[3]/a',
-        #'div[2]/div[3]/a',
-        #'div[2]/div[2]',
-        #'div[2]/div[4]/div/div/div[3]/div[2]'
-    ),
+       Path to data directory. Must be read- and writable.
+    """
 
-    Broker(
-        url='https://www.kurtzke-immobilien.de/objekttyp/mietwohnung/',
-        node=".//div[@class='item-listing-wrap hz-item-gallery-js card']",
-        link_node='div/div/div[2]/h2/a',
-        title_node='div/div/div[2]/h2/a',
-        location_node='div/div/div[2]/address',
-        rooms_node='div/div/div[2]/ul/li/span[2]'
-    ),
+    def __init__(self, companies: Iterable[Company], *, data_path: PathLike | str = 'data') -> None:
+        self.companies = list(companies)
+        for company in companies:
+            company.directory = self
+        self.data_path = Path(data_path)
 
-    Broker(
-        'https://www.livinginberlin.de/angebote/mieten',
-        ".//div[@class='uk-container uk-margin-large-top uk-margin-medium-bottom']/div/div",
-        'div/div/a',
-        'div/div[2]/p',
-        'div/div[2]/h3',
-        'div/div[2]/span/tail()',
-        location_filter='Berlin'
-    )
-]
+    def get_ads(self) -> list[Ad]:
+        """Get currently available flats."""
+        return [ad for company in self.companies for ad in company.get_ads()]
+        #ads = []
+        #for company in self.companies:
+        #    ads += company.get_ads()
+        #return ads
+
+    def update(self) -> None:
+        """Aggregate current ads from all :attr:`companies`."""
+        logger = getLogger(__name__)
+        for company in self.companies:
+            try:
+                company.update()
+            except OSError as e:
+                logger.error('Failed to communicate with %s (%s)', company.host, e)
+            except ValueError as e:
+                logger.error('Bad HTML for %s (%s)', company.host, e.__cause__)
+            except LookupError as e:
+                logger.error('Failed parse flat ad of %s (%s)', company.host, e)
+            except SyntaxError as e:
+                logger.error('Bad path for %s (%s)', company.host, e)
 
 # request -> HTML
 # parse -> [ads]
