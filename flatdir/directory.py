@@ -19,6 +19,8 @@ import html5lib
 from html5lib import HTMLParser
 from html5lib.html5parser import ParseError
 
+ONLINE_THRESHOLD = timedelta(hours=1, minutes=30)
+
 class Company:
     """TODO."""
 
@@ -36,6 +38,7 @@ class Company:
         self.location_filter = location_filter
 
         self._directory: Directory | None = None
+        self._ads_path = Path()
 
     @property
     def directory(self) -> Directory:
@@ -49,6 +52,15 @@ class Company:
         if self._directory:
             raise ValueError('Already set directory')
         self._directory = value
+        self._ads_path = self.directory.data_path / f'{self.host}.csv'
+
+    def is_ok(self) -> bool:
+        """TODO."""
+        try:
+            return (datetime.now() - datetime.fromtimestamp(self._ads_path.stat().st_mtime)
+                    < ONLINE_THRESHOLD)
+        except FileNotFoundError:
+            return False
 
     def _parse_html(self, data: bytes) -> list[Ad]:
         # TODO
@@ -100,7 +112,7 @@ class Company:
             path = self.directory.data_path / f'{self.host}.{ext}'
             with path.open('wb') as fw:
                 fw.write(data)
-            logger.info('Fetched %s', self.url)
+            logger.debug('Fetched %s', self.url)
 
         with path.open('rb') as f:
             data = f.read()
@@ -259,9 +271,9 @@ class Directory:
 
     def __init__(self, companies: Iterable[Company], *, data_path: PathLike | str = 'data') -> None:
         self.companies = list(companies)
+        self.data_path = Path(data_path)
         for company in companies:
             company.directory = self
-        self.data_path = Path(data_path)
 
     def get_ads(self) -> list[Ad]:
         """Get currently available flats."""

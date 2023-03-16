@@ -58,8 +58,15 @@ class CompanyTest(TestCase):
         CompanyTest.server.shutdown()
 
     # TODO
-    #def test_update(self) -> None:
-    #    pass
+    def test_update(self) -> None:
+        pass
+        # update()
+        # ads = get_ads()
+        # assertEqual(ads, [...])
+
+    def test_update(self) -> None:
+        pass
+
     #def test_get_ads(self) -> None:
     #    pass
 

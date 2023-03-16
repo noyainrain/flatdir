@@ -14,23 +14,23 @@ from .util import ColorFormatter, color_stream_handler
 def main() -> None:
     """TODO."""
 
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)s %(levelname)s %(name)s: %(message)s')
-    #logging.basicConfig(
-    #    level=logging.DEBUG,
-    #    handlers=[color_stream_handler(fmt='%(asctime)s %(levelname)s %(name)s: %(message)s')])
+    #logging.basicConfig(level=logging.DEBUG,
+    #                    format='%(asctime)s %(levelname)s %(name)s: %(message)s')
+    logging.basicConfig(
+        level=logging.DEBUG,
+        handlers=[color_stream_handler(fmt='%(asctime)s %(levelname)s %(name)s: %(message)s')])
     logger = getLogger(__name__)
 
-    logger.debug('Fetched document')
-    logger.info('Updated ads')
-    logger.warning('Unknown configuration key')
-    logger.error('Failed to fetch document')
-    try:
-        raise ValueError()
-    except ValueError:
-        logger.exception('Unhandled error')
-    logger.critical('Failed to access data directory')
-    return
+    #logger.debug('Fetched document')
+    #logger.info('Updated ads')
+    #logger.warning('Unknown configuration key')
+    #logger.error('Failed to fetch document')
+    #try:
+    #    raise ValueError()
+    #except ValueError:
+    #    logger.exception('Unhandled error')
+    #logger.critical('Failed to access data directory')
+    #return
 
     data_path = Path('data')
     data_path.mkdir(exist_ok=True)
