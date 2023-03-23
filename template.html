@@ -195,6 +195,25 @@
             #companies {
                 text-decoration: underline;
             }
+
+            .company {
+                display: inline-block;
+                border: 1px solid white;
+                border-radius: 0.75rem;
+                padding-inline: 0.75rem;
+            }
+
+            .company a {
+                color: unset;
+            }
+
+            .company-ok {
+                background: #80ff80;
+            }
+
+            .company-not-ok {
+                background: #ff8080;
+            }
         </style>
     </head>
 
@@ -210,9 +229,10 @@
                 <summary>
                     Currently available flats in Berlin from <span id="companies">{{ companies|length }} companies</span>.
                 </summary>
+                <!-- TODO remove padding and apply all style to <a> -->
                 <ul>
                     {% for company in companies %}
-                        <li>
+                        <li class="company company-{{ 'ok' if company.is_ok() else 'not-ok' }}">
                             <a href="{{ company.url }}" target="_blank">{{ company.host }}</a>
                         </li>
                     {% endfor %}

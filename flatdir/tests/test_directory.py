@@ -9,10 +9,22 @@ from functools import partial
 from importlib import resources
 from urllib.parse import urljoin
 
-from flatdir.directory import Company, Directory
+from flatdir.directory import Ad, Company, Directory
+
+from collections.abc import Callable
+
+def fixed_time(time: datetime) -> Callable[[], datetime]:
+    def f() -> datetime:
+        return time
+    return f
 
 class CompanyTest(TestCase):
     URL = 'http://localhost:16080'
+    NOW = datetime(2023, 3, 16, 14)
+    ADS = [
+        Ad(urljoin(URL, 'foobar.html'), 'Foobar', 'Kreuzberg', '4', NOW),
+        Ad(urljoin(URL, 'oink.html'), 'Oink', 'Mitte', '2', NOW)
+    ]
 
     server: ClassVar[HTTPServer]
 
@@ -52,44 +64,55 @@ class CompanyTest(TestCase):
         #    'typo': Company(urljoin(self.URL, 'index.html'), './/li', 'a', 'p',
         #                    "span[@class='location']", "span[@class='rooms']")
         #}
-        #self.directory = Directory(self.companies.values(), data_path=self.data_path)
+
+        self.directory = Directory([Company(urljoin(self.URL, 'index.html'), *self.PATHS)],
+                                   data_path=self.data_path)
 
     def tearDownClass() -> None:
         CompanyTest.server.shutdown()
 
-    # TODO
     def test_update(self) -> None:
-        pass
-        # update()
-        # ads = get_ads()
-        # assertEqual(ads, [...])
+        print('COMPANY NOW', CompanyTest.NOW, CompanyTest.NOW.tzinfo)
+        self.directory.now = fixed_time(CompanyTest.NOW)
+        company = self.directory.companies[0]
+        company.update()
+        ads = company.get_ads()
+        print('LOADTIME', ads[0].time, ads[0].time.tzinfo)
+        self.assertEqual(ads, CompanyTest.ADS)
+        self.assertTrue(company.is_ok())
 
-    def test_update(self) -> None:
-        pass
-
-    #def test_get_ads(self) -> None:
-    #    pass
+    def test_update_again(self) -> None:
+        company = self.directory.companies[0]
+        self.directory.now = fixed_time(CompanyTest.NOW)
+        company.update()
+        self.directory.now = fixed_time(CompanyTest.NOW + timedelta(hours = 5))
+        company.update()
+        ads = company.get_ads()
+        self.assertEqual(ads, CompanyTest.ADS)
 
     PATHS = ('.//li', 'a', 'a', "span[@class='location']", "span[@class='rooms']")
 
     def test_query(self) -> None:
+        directory = Directory([Company(urljoin(self.URL, 'index.html'), *self.PATHS)],
+                              data_path=self.data_path)
+        directory.now = fixed_time(CompanyTest.NOW)
+        ads = directory.companies[0].query()
+        self.assertEqual(ads, CompanyTest.ADS)
+
         # list[Ad]
         #company = Company(urljoin(self.URL, 'index.html'), *self.PATHS)
         #_ = Directory([company], data_path=self.data_path)
         #ads = company.query()
         #ads = self.companies['html'].query()
 
-        directory = Directory([Company(urljoin(self.URL, 'index.html'), *self.PATHS)],
-                              data_path=self.data_path)
-        ads = directory.companies[0].query()
-        self.assertEqual(len(ads), 2)
-        self.assertEqual(ads[0].url, urljoin(self.URL, 'foobar.html'))
-        self.assertEqual(ads[0].title, 'Foobar')
-        self.assertEqual(ads[0].location, 'Kreuzberg')
-        self.assertEqual(ads[0].rooms, '4')
-        self.assertAlmostEqual(ads[0].time, datetime.now(timezone.utc), delta=timedelta(seconds=1))
-        self.assertEqual(ads[1].url, urljoin(self.URL, 'oink.html'))
-        self.assertAlmostEqual(ads[1].time, datetime.now(timezone.utc), delta=timedelta(seconds=1))
+        #self.assertEqual(len(ads), 2)
+        #self.assertEqual(ads[0].url, urljoin(self.URL, 'foobar.html'))
+        #self.assertEqual(ads[0].title, 'Foobar')
+        #self.assertEqual(ads[0].location, 'Kreuzberg')
+        #self.assertEqual(ads[0].rooms, '4')
+        ## TODO self.assertAlmostEqual(ads[0].time, datetime.now(timezone.utc), delta=timedelta(seconds=1))
+        #self.assertEqual(ads[1].url, urljoin(self.URL, 'oink.html'))
+        ## TODO self.assertAlmostEqual(ads[1].time, datetime.now(timezone.utc), delta=timedelta(seconds=1))
 
     def test_query_json(self) -> None:
         # TODO path should be flats.*
@@ -97,25 +120,28 @@ class CompanyTest(TestCase):
 
         company = Company(urljoin(self.URL, 'ads.json'), 'flats', 'url', 'title', 'location',
                          'rooms')
-        _ = Directory([company], data_path=self.data_path)
+        directory = Directory([company], data_path=self.data_path)
+        directory.now = fixed_time(CompanyTest.NOW)
 
-        ads = company.query()
+        ads = directory.companies[0].query()
+        self.assertEqual(ads, CompanyTest.ADS)
+
         #ads = self.companies['json'].query()
-        self.assertEqual(len(ads), 2)
-        self.assertEqual(ads[0].url, urljoin(self.URL, 'foobar.html'))
-        self.assertEqual(ads[1].url, urljoin(self.URL, 'oink.html'))
-        self.assertEqual(ads[1].title, 'Oink')
-        self.assertEqual(ads[1].location, 'Mitte')
-        self.assertEqual(ads[1].rooms, '2')
+        #self.assertEqual(len(ads), 2)
+        #self.assertEqual(ads[0].url, urljoin(self.URL, 'foobar.html'))
+        #self.assertEqual(ads[1].url, urljoin(self.URL, 'oink.html'))
+        #self.assertEqual(ads[1].title, 'Oink')
+        #self.assertEqual(ads[1].location, 'Mitte')
+        #self.assertEqual(ads[1].rooms, '2')
 
     def test_query_network_error(self) -> None:
         # broker = Broker('http://example.invalid', '', '', '', '', '')
 
         company = Company('http://localhost:16080/doesnotexist', *self.PATHS)
-        _ = Directory([company], data_path=self.data_path)
+        directory = Directory([company], data_path=self.data_path)
 
         with self.assertRaises(OSError):
-            company.query()
+            directory.companies[0].query()
             # self.companies['broken'].query()
 
     #def test_query_content_error(self) -> None:
@@ -131,11 +157,11 @@ class CompanyTest(TestCase):
 
         company = Company(urljoin(self.URL, 'index.html'), './/li', 'a', 'p',
                           "span[@class='location']", "span[@class='rooms']")
-        _ = Directory([company], data_path=self.data_path)
+        directory = Directory([company], data_path=self.data_path)
 
         # with assertRaisesRegex(LookupError):
         with self.assertRaises(LookupError):
-            company.query()
+            directory.companies[0].query()
             # self.companies['typo'].query()
 
     # TODO if we parse rooms as number (or generally parse nonstring fields) -> check for parsing

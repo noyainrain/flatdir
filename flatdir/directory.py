@@ -20,6 +20,7 @@ from html5lib import HTMLParser
 from html5lib.html5parser import ParseError
 
 ONLINE_THRESHOLD = timedelta(hours=1, minutes=30)
+# ONLINE_THRESHOLD = timedelta(hours=0, minutes=1)
 
 class Company:
     """TODO."""
@@ -57,7 +58,7 @@ class Company:
     def is_ok(self) -> bool:
         """TODO."""
         try:
-            return (datetime.now() - datetime.fromtimestamp(self._ads_path.stat().st_mtime)
+            return (self.directory.now() - datetime.fromtimestamp(self._ads_path.stat().st_mtime)
                     < ONLINE_THRESHOLD)
         except FileNotFoundError:
             return False
@@ -76,7 +77,8 @@ class Company:
 
         def _get_mtime(path: Path) -> datetime | None:
             try:
-                return datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
+                # return datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
+                return datetime.fromtimestamp(path.stat().st_mtime)
             except FileNotFoundError:
                 return None
 
@@ -100,7 +102,7 @@ class Company:
             path = self.directory.data_path / f'{self.host}.{ext}'
             mtime = _get_mtime(path)
 
-        now = datetime.now(timezone.utc)
+        now = self.directory.now()
         if not mtime or now - mtime > timedelta(minutes=60):
             with cast(HTTPResponse, urlopen(self.url)) as response:
                 data = response.read()
@@ -150,7 +152,7 @@ class Company:
                     lookup(item, self.title_node) or '?',
                     lookup(item, self.location_node),
                     str(lookup(item, self.rooms_node, (str, int))),
-                    datetime.now(timezone.utc))
+                    self.directory.now())
                 for item in items]
 
         else:
@@ -190,7 +192,7 @@ class Company:
                     # int((find_node(node, self.rooms_node).tail or '').strip() or '0'),
                     # (find_node(node, self.rooms_node).tail or '').strip() or '?',
                     select(node, self.rooms_node).strip() or '',
-                    datetime.now(timezone.utc))
+                    self.directory.now())
                 for node in nodes]
 
         ads = [ad for ad in ads if ad.rooms]
@@ -216,8 +218,7 @@ class Company:
                 # print('OVERWRITING TIME', ad.time, '->', old_ad.time, ad.url)
                 ad.time = old_ad.time
 
-        path = Path(f'data/{self.host}.csv')
-        with path.open('w', encoding='utf-8') as f:
+        with self._ads_path.open('w', encoding='utf-8') as f:
             writer = csv.DictWriter(f, ['url', 'title', 'location', 'rooms', 'time'])
             writer.writeheader()
             for ad in ads:
@@ -230,9 +231,8 @@ class Company:
 
     def get_ads(self) -> list[Ad]:
         """TODO."""
-        path = Path(f'data/{self.host}.csv')
         try:
-            with path.open(encoding='utf-8') as f:
+            with self._ads_path.open(encoding='utf-8') as f:
                 return [
                     Ad(row['url'], row['title'], row['location'], row['rooms'],
                        datetime.fromisoformat(row['time']))
@@ -274,6 +274,9 @@ class Directory:
         self.data_path = Path(data_path)
         for company in companies:
             company.directory = self
+
+    def now(self) -> datetime:
+        return datetime.now()
 
     def get_ads(self) -> list[Ad]:
         """Get currently available flats."""
