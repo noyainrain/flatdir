@@ -26,6 +26,50 @@ FOREGROUND = 30
 
 _FormatStyle = Literal['%', '{', '$']
 
+from typing import cast
+
+def query_json(obj: dict[str, object], path: str) -> list[object]:
+    """TODO."""
+    tokens = path.split('.')
+    values: list[object] = [obj]
+    for token in tokens:
+        level = []
+        for value in values:
+            if isinstance(value, dict):
+                obj = value
+                if token == '*':
+                    level += list(obj.values())
+                else:
+                    # LookupError passed through
+                    level.append(obj[token])
+            elif isinstance(value, list):
+                array = cast(list[object], value)
+                if token == '*':
+                    level += array
+                else:
+                    try:
+                        level.append(array[int(token)])
+                    except (IndexError, ValueError):
+                        raise LookupError(token) from None
+            else:
+                # NOTE could add path information here
+                # raise ValueError(f'Bad value type {type(value)}')
+                raise LookupError(token)
+        values = level
+    return values
+
+# objects = [{'foo': {}}]
+# tokens = 'foo.*.*'.split('.')
+# for token in tokens:
+#     new = []
+#     for obj in objects:
+#         keys = [token]
+#         if token == '*':
+#             keys = obj.keys()
+#         for key in keys:
+#             new.append(obj[key])
+#     objects = new
+
 class Color(Enum):
     """ANSI terminal color."""
     BLACK = 0

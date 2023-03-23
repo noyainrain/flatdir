@@ -19,6 +19,8 @@ import html5lib
 from html5lib import HTMLParser
 from html5lib.html5parser import ParseError
 
+from .util import query_json
+
 ONLINE_THRESHOLD = timedelta(hours=1, minutes=30)
 # ONLINE_THRESHOLD = timedelta(hours=0, minutes=1)
 
@@ -124,30 +126,41 @@ class Company:
             result = cast(object, json.loads(data))
             assert isinstance(result, dict)
 
+            #def lookup(data: dict[str, object], path: str, typ: type | tuple[type] = str) -> str:
+            #    try:
+            #        value = data[path]
+            #    except KeyError:
+            #        raise LookupError(path) from None
+            #    if not isinstance(value, typ):
+            #        raise LookupError(f'wrong type {type(value).__name__} for {path}')
+            #    return value
+
             def lookup(data: dict[str, object], path: str, typ: type | tuple[type] = str) -> str:
                 try:
-                    value = data[path]
-                except KeyError:
+                    value = query_json(data, path)[0]
+                except IndexError:
                     raise LookupError(path) from None
                 if not isinstance(value, typ):
-                    raise LookupError(f'wrong type {type(value).__name__} for {path}')
+                    raise LookupError(f'Bad element type {type(value).__name__} at {path}')
                 return value
 
-            item_data = lookup(result, self.node, typ=list)
+            item_data = query_json(result, self.node)
+            # item_data = lookup(result, self.node, typ=list)
             for item in item_data:
                 if not isinstance(item, dict):
-                    raise LookupError('TODO')
+                    raise LookupError(f'Bad element type {type(item).__name__} at {self.node}')
             items = cast(list[dict[str, object]], item_data)
+
             ## TODO (its okay to parse from data: object because its internal method)
             #def parse_ad(data: object) -> None:
             #def extract_ad(data: object) -> None:
             #    pass
 
+            # float, int, bool
+            # None
+            # {}, [] => [3, 'lol', True]
             ads = [
                 Ad(
-                    # float, int, bool
-                    # None
-                    # {}, [] => [3, 'lol', True]
                     urljoin(self.url, lookup(item, self.link_node)),
                     lookup(item, self.title_node) or '?',
                     lookup(item, self.location_node),
@@ -297,7 +310,7 @@ class Directory:
             except ValueError as e:
                 logger.error('Bad HTML for %s (%s)', company.host, e.__cause__)
             except LookupError as e:
-                logger.error('Failed parse flat ad of %s (%s)', company.host, e)
+                logger.error('Failed to parse flat ad of %s (%s)', company.host, e)
             except SyntaxError as e:
                 logger.error('Bad path for %s (%s)', company.host, e)
 

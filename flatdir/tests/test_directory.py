@@ -13,6 +13,7 @@ from flatdir.directory import Ad, Company, Directory
 
 from collections.abc import Callable
 
+# fixed_time / NOW / ADS -> see how it works in combitionation with DirectoryTest.test_update
 def fixed_time(time: datetime) -> Callable[[], datetime]:
     def f() -> datetime:
         return time
@@ -115,10 +116,9 @@ class CompanyTest(TestCase):
         ## TODO self.assertAlmostEqual(ads[1].time, datetime.now(timezone.utc), delta=timedelta(seconds=1))
 
     def test_query_json(self) -> None:
-        # TODO path should be flats.*
         # NOTE for future use: url_pattern=foobar.com/flats/{}.html
 
-        company = Company(urljoin(self.URL, 'ads.json'), 'flats', 'url', 'title', 'location',
+        company = Company(urljoin(self.URL, 'ads.json'), 'flats.*', 'url', 'title', 'location',
                          'rooms')
         directory = Directory([company], data_path=self.data_path)
         directory.now = fixed_time(CompanyTest.NOW)

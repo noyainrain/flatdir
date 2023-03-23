@@ -55,7 +55,7 @@ COMPANIES = [
 
     Company(
         'https://www.howoge.de/?type=999&tx_howsite_json_list[action]=immoList',
-        'immoobjects',
+        'immoobjects.*',
         'link',
         'title',
         'district',
