@@ -91,7 +91,7 @@ class CompanyTest(TestCase):
         ads = company.get_ads()
         self.assertEqual(ads, CompanyTest.ADS)
 
-    PATHS = ('.//li', 'a', 'a', "span[@class='location']", "span[@class='rooms']")
+    PATHS = ('.//li', 'a/@href', 'a', "span[@class='location']", "span[@class='rooms']")
 
     def test_query(self) -> None:
         directory = Directory([Company(urljoin(self.URL, 'index.html'), *self.PATHS)],
@@ -155,7 +155,7 @@ class CompanyTest(TestCase):
         # XXX bug in the std library for nonmatching brackets [ ]
         # TypeError: 'NoneType' object is not callable
 
-        company = Company(urljoin(self.URL, 'index.html'), './/li', 'a', 'p',
+        company = Company(urljoin(self.URL, 'index.html'), './/li', 'a/@href', 'p',
                           "span[@class='location']", "span[@class='rooms']")
         directory = Directory([company], data_path=self.data_path)
 

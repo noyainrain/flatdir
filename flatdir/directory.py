@@ -10,9 +10,10 @@ from http.client import HTTPResponse
 import json
 from logging import getLogger
 from pathlib import Path
+import re
+from typing import TypeVar, cast, overload
 from urllib.parse import urljoin, urlsplit
 from urllib.request import urlopen
-from typing import cast
 from xml.etree.ElementTree import Element
 
 import html5lib
@@ -24,20 +25,53 @@ from .util import query_json
 ONLINE_THRESHOLD = timedelta(hours=1, minutes=30)
 # ONLINE_THRESHOLD = timedelta(hours=0, minutes=1)
 
-class Company:
-    """TODO."""
+_T = TypeVar('_T')
+_U = TypeVar('_U')
 
-    def __init__(self, url: str, node: str, link_node: str, title_node: str, location_node: str,
-                 rooms_node: str, *, location_filter: str | None = None) -> None:
+class Company:
+    """Real estate company.
+
+    .. attribute:: url
+
+       URL of the document containing currently available flats of the company.
+
+    .. attribute:: ad_path
+
+       Path matching all ads in the document.
+
+    .. attribute:: url_path
+
+       Subpath to the URL of an ad.
+
+    .. attribute:: title_path
+
+       Subpath to the title of an ad.
+
+    .. attribute:: location_path
+
+       Subpath to the location of a flat.
+
+    .. attribute:: rooms_path
+
+       Subpath to the number of rooms of a flat.
+
+    .. attribute:: location_filter
+
+       Term that the location of a flat needs to contain to be included.
+    """
+
+    def __init__(self, url: str, ad_path: str, url_path: str, title_path: str, location_path: str,
+                 rooms_path: str, *, location_filter: str = '') -> None:
+        components = urlsplit(url)
+        if not (components.scheme and components.hostname):
+            raise ValueError(f'Relative url {url}')
         self.url = url
-        self.host = urlsplit(url).hostname
-        if not self.host:
-            raise ValueError(f'Bad URL {url}')
-        self.node = node
-        self.link_node = link_node
-        self.title_node = title_node
-        self.location_node = location_node
-        self.rooms_node = rooms_node
+        self.host = components.hostname
+        self.ad_path = ad_path
+        self.url_path = url_path
+        self.title_path = title_path
+        self.location_path = location_path
+        self.rooms_path = rooms_path
         self.location_filter = location_filter
 
         self._directory: Directory | None = None
@@ -135,21 +169,29 @@ class Company:
             #        raise LookupError(f'wrong type {type(value).__name__} for {path}')
             #    return value
 
-            def lookup(data: dict[str, object], path: str, typ: type | tuple[type] = str) -> str:
+            @overload
+            def lookup(data: dict[str, object], path: str, typ: type[_T]) -> _T:
+                pass
+            @overload
+            def lookup(data: dict[str, object], path: str,
+                       typ: tuple[type[_T], type[_U]]) -> _T | _U:
+                pass
+            def lookup(data: dict[str, object], path: str,
+                       typ: type[_T] | tuple[type[_T], type[_U]]) -> _T | _U:
                 try:
-                    value = query_json(data, path)[0]
+                    return query_json(data, path, typ)[0]
                 except IndexError:
                     raise LookupError(path) from None
-                if not isinstance(value, typ):
-                    raise LookupError(f'Bad element type {type(value).__name__} at {path}')
-                return value
 
-            item_data = query_json(result, self.node)
             # item_data = lookup(result, self.node, typ=list)
-            for item in item_data:
-                if not isinstance(item, dict):
-                    raise LookupError(f'Bad element type {type(item).__name__} at {self.node}')
+
+            item_data = query_json(result, self.ad_path, dict)
             items = cast(list[dict[str, object]], item_data)
+
+            #for item in item_data:
+            #    if not isinstance(item, dict):
+            #        raise LookupError(f'Bad element type {type(item).__name__} at {self.node}')
+            #items = cast(list[dict[str, object]], item_data)
 
             ## TODO (its okay to parse from data: object because its internal method)
             #def parse_ad(data: object) -> None:
@@ -161,10 +203,10 @@ class Company:
             # {}, [] => [3, 'lol', True]
             ads = [
                 Ad(
-                    urljoin(self.url, lookup(item, self.link_node)),
-                    lookup(item, self.title_node) or '?',
-                    lookup(item, self.location_node),
-                    str(lookup(item, self.rooms_node, (str, int))),
+                    urljoin(self.url, lookup(item, self.url_path, str)),
+                    lookup(item, self.title_path, str) or '?',
+                    lookup(item, self.location_path, str),
+                    str(lookup(item, self.rooms_path, (str, int))),
                     self.directory.now())
                 for item in items]
 
@@ -184,27 +226,43 @@ class Company:
 
             def select(elem: Element, path: str) -> str:
                 mode = 'text'
-                if path.endswith('/tail()'):
+                if match := re.search(r'/@([^/]+)$', path):
+                    mode = 'attr'
+                    attr_name = cast(str, match[1])
+                    path = path[:match.start()]
+                elif path.endswith('/text()'):
+                    mode = 'text'
+                    path = path[:-7]
+                elif path.endswith('/tail()'):
                     mode = 'tail'
                     path = path[:-7]
+                #else:
+                #    assert False
 
                 node = elem.find(path)
                 if node is None:
                     raise LookupError(path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>")
 
+                if mode == 'attr':
+                    return node.get(attr_name) or ''
                 if mode == 'tail':
                     return node.tail or ''
+                if mode == 'text':
+                    return node.text or ''
                 return node.text or ''
 
-            nodes = tree.findall(self.node)
+            nodes = tree.findall(self.ad_path)
             ads = [
                 Ad(
-                    urljoin(self.url, find_node(node, self.link_node).get('href')),
-                    (find_node(node, self.title_node).text or '?').strip(),
-                    (find_node(node, self.location_node).text or '?').strip(),
+                    # urljoin(self.url, find_node(node, self.link_node).get('href')),
+                    # (find_node(node, self.title_node).text or '?').strip(),
+                    # (find_node(node, self.location_node).text or '?').strip(),
+                    urljoin(self.url, select(node, self.url_path)),
+                    (select(node, self.title_path) or '?').strip(),
+                    (select(node, self.location_path) or '?').strip(),
                     # int((find_node(node, self.rooms_node).tail or '').strip() or '0'),
                     # (find_node(node, self.rooms_node).tail or '').strip() or '?',
-                    select(node, self.rooms_node).strip() or '',
+                    select(node, self.rooms_path).strip() or '',
                     self.directory.now())
                 for node in nodes]
 
@@ -243,7 +301,7 @@ class Company:
         logger.info('Updated %d ad(s) from %s', len(ads), self.host)
 
     def get_ads(self) -> list[Ad]:
-        """TODO."""
+        """Get currently available flats of the company."""
         try:
             with self._ads_path.open(encoding='utf-8') as f:
                 return [
@@ -255,7 +313,28 @@ class Company:
 
 @dataclass
 class Ad:
-    """TODO."""
+    """Flat ad.
+
+    .. attribute:: url
+
+       URL of the ad.
+
+    .. attribute:: title
+
+       Title of the ad.
+
+    .. attribute:: location
+
+       Location of the flat.
+
+    .. attribute:: rooms
+
+       Number of rooms of the flat.
+
+    .. attribute:: time
+
+       TODO.
+    """
 
     url: str
     title: str
@@ -277,14 +356,38 @@ class Directory:
 
        Source real estate companies.
 
+    .. attribute:: title
+
+       Title of the directory.
+
+    .. attribute:: description
+
+       Short description of the directory.
+
+    .. attribute:: extra
+
+       Any extra information about the directory as HTML.
+
     .. attribute:: data_directory
 
-       Path to data directory. Must be read- and writable.
+       Path to data directory.
     """
 
-    def __init__(self, companies: Iterable[Company], *, data_path: PathLike | str = 'data') -> None:
+    def __init__(
+        self, companies: Iterable[Company], *, title: str = 'Flat Directory',
+        description: str = 'Currently available flats from {companies} real estate companies.',
+        extra: str | None = None, data_path: PathLike[str] | str = 'data'
+    ) -> None:
         self.companies = list(companies)
+        self.title = title.strip()
+        if not self.title:
+            raise ValueError('Blank title')
+        self.description = description.strip()
+        if not self.description:
+            raise ValueError('Blank description')
+        self.extra = (extra.strip() or None) if extra else None
         self.data_path = Path(data_path)
+
         for company in companies:
             company.directory = self
 
@@ -307,12 +410,14 @@ class Directory:
                 company.update()
             except OSError as e:
                 logger.error('Failed to communicate with %s (%s)', company.host, e)
-            except ValueError as e:
-                logger.error('Bad HTML for %s (%s)', company.host, e.__cause__)
+            #except ValueError as e:
+            #    logger.error('Bad HTML for %s (%s)', company.host, e.__cause__)
+            # TODO check for JSON error
             except LookupError as e:
                 logger.error('Failed to parse flat ad of %s (%s)', company.host, e)
-            except SyntaxError as e:
-                logger.error('Bad path for %s (%s)', company.host, e)
+            # make all paths valid OR check syntax in __init__
+            #except SyntaxError as e:
+            #    logger.error('Bad path for %s (%s)', company.host, e)
 
 # request -> HTML
 # parse -> [ads]

@@ -18,7 +18,7 @@ from enum import Enum
 import logging
 from logging import Formatter, LogRecord, StreamHandler
 import sys
-from typing import Literal, TextIO
+from typing import Literal, TextIO, TypeVar, overload
 
 SELECT_GRAPHIC_RENDITION = 'm'
 NORMAL = 0
@@ -26,9 +26,23 @@ FOREGROUND = 30
 
 _FormatStyle = Literal['%', '{', '$']
 
+_T = TypeVar('_T')
+_U = TypeVar('_U')
+
 from typing import cast
 
+@overload
 def query_json(obj: dict[str, object], path: str) -> list[object]:
+    pass
+@overload
+def query_json(obj: dict[str, object], path: str, typ: type[_T]) -> list[_T]:
+    pass
+@overload
+def query_json(obj: dict[str, object], path: str, typ: tuple[type[_T], type[_U]]) -> list[_T | _U]:
+    pass
+def query_json(
+    obj: dict[str, object], path: str, typ: type[_T] | tuple[type[_T], type[_U]] | None = None
+) -> list[object] | list[_T] | list[_T | _U]:
     """TODO."""
     tokens = path.split('.')
     values: list[object] = [obj]
@@ -56,6 +70,11 @@ def query_json(obj: dict[str, object], path: str) -> list[object]:
                 # raise ValueError(f'Bad value type {type(value)}')
                 raise LookupError(token)
         values = level
+
+    if typ:
+        for value in values:
+            if not isinstance(value, typ):
+                raise LookupError('BAD TYPE TODO')
     return values
 
 # objects = [{'foo': {}}]

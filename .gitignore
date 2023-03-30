@@ -1,4 +1,6 @@
-/index.html
-/data/
 __pycache__/
 /node_modules/
+/flatdir.ini
+/data/
+/index.html
+/.mypy_cache/
