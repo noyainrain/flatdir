@@ -1,3 +1,5 @@
+# TODO
+
 """TODO."""
 
 from __future__ import annotations
@@ -5,12 +7,12 @@ from __future__ import annotations
 import csv
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from http.client import HTTPResponse
 import json
 from logging import getLogger
+from os import PathLike
 from pathlib import Path
-import re
 from typing import TypeVar, cast, overload
 from urllib.parse import urljoin, urlsplit
 from urllib.request import urlopen
@@ -20,7 +22,7 @@ import html5lib
 from html5lib import HTMLParser
 from html5lib.html5parser import ParseError
 
-from .util import query_json
+from .util import query_json, query_xml
 
 ONLINE_THRESHOLD = timedelta(hours=1, minutes=30)
 # ONLINE_THRESHOLD = timedelta(hours=0, minutes=1)
@@ -218,40 +220,47 @@ class Company:
             #except ParseError as e:
             #    raise ValueError('Bad HTML') from e
 
-            def find_node(elem: Element, path: str) -> Element:
-                node = elem.find(path)
-                if node is None:
-                    raise LookupError(path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>")
-                return node
+            #def find_node(elem: Element, path: str) -> Element:
+            #    node = elem.find(path)
+            #    if node is None:
+            #        raise LookupError(path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>")
+            #    return node
+
+                #mode = 'text'
+                #if match := re.search(r'/@([^/]+)$', path):
+                #    mode = 'attr'
+                #    attr_name = cast(str, match[1])
+                #    path = path[:match.start()]
+                #elif path.endswith('/text()'):
+                #    mode = 'text'
+                #    path = path[:-7]
+                #elif path.endswith('/tail()'):
+                #    mode = 'tail'
+                #    path = path[:-7]
+                ##else:
+                ##    assert False
+
+                #node = elem.find(path)
+                #if node is None:
+                #    raise LookupError(path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>")
+
+                #if mode == 'attr':
+                #    return node.get(attr_name) or ''
+                #if mode == 'tail':
+                #    return node.tail or ''
+                #if mode == 'text':
+                #    return node.text or ''
+                #return node.text or ''
 
             def select(elem: Element, path: str) -> str:
-                mode = 'text'
-                if match := re.search(r'/@([^/]+)$', path):
-                    mode = 'attr'
-                    attr_name = cast(str, match[1])
-                    path = path[:match.start()]
-                elif path.endswith('/text()'):
-                    mode = 'text'
-                    path = path[:-7]
-                elif path.endswith('/tail()'):
-                    mode = 'tail'
-                    path = path[:-7]
-                #else:
-                #    assert False
-
-                node = elem.find(path)
-                if node is None:
+                try:
+                    node = query_xml(elem, path)[0]
+                except IndexError:
                     raise LookupError(path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>")
+                return node.text or '' # TODO itertext()
 
-                if mode == 'attr':
-                    return node.get(attr_name) or ''
-                if mode == 'tail':
-                    return node.tail or ''
-                if mode == 'text':
-                    return node.text or ''
-                return node.text or ''
-
-            nodes = tree.findall(self.ad_path)
+            # nodes = tree.findall(self.ad_path)
+            nodes = query_xml(tree, self.ad_path)
             ads = [
                 Ad(
                     # urljoin(self.url, find_node(node, self.link_node).get('href')),
@@ -346,8 +355,6 @@ class Ad:
         self.host = urlsplit(self.url).hostname
         if not self.host:
             raise ValueError(f'Bad URL {self.url}')
-
-from os import PathLike
 
 class Directory:
     """Directory of available flats from different real estate companies.

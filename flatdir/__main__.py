@@ -14,7 +14,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from .directory import Company, Directory
 
-from .util import ColorFormatter, color_stream_handler
+from .util import ColorFormatter, color_stream_handler, copy_package
 
 from typing import cast
 
@@ -91,13 +91,20 @@ def main() -> int:
     directory.update()
     ads = directory.get_ads()
 
+    # ------
+
+    web_path = directory.data_path / 'web'
+    web_path.mkdir(exist_ok=True)
+    copy_package(resources.files('flatdir.res') / 'fonts', web_path / 'fonts')
+
     loader = FileSystemLoader('.')
     env = Environment(loader=loader)
     template = env.get_template('template.html')
-    with Path('index.html').open('w', encoding='utf-8') as f:
+    index_path = web_path / 'index.html'
+    with index_path.open('w', encoding='utf-8') as f:
         f.write(template.render(ads=ads, companies=companies))
 
-    logger.info('Generated index.html')
+    logger.info('Generated %s', index_path)
     return 0
 
 if __name__ == '__main__':

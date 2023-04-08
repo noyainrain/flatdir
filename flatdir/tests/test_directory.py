@@ -13,6 +13,10 @@ from flatdir.directory import Ad, Company, Directory
 
 from collections.abc import Callable
 
+class HTTPRequestHandler(SimpleHTTPRequestHandler):
+    def log_message(self, format: str, *args: object) -> None:
+        pass
+
 # fixed_time / NOW / ADS -> see how it works in combitionation with DirectoryTest.test_update
 def fixed_time(time: datetime) -> Callable[[], datetime]:
     def f() -> datetime:
@@ -35,7 +39,7 @@ class CompanyTest(TestCase):
 
     @staticmethod
     def setUpClass() -> None:
-        handler = partial(SimpleHTTPRequestHandler,
+        handler = partial(HTTPRequestHandler, #SimpleHTTPRequestHandler,
                           directory=resources.path('flatdir.tests.res', '.'))
         CompanyTest.server = HTTPServer(('', 16080), handler)
         thread = Thread(target=CompanyTest._serve)
@@ -51,8 +55,9 @@ class CompanyTest(TestCase):
         # TODO remove tempdir after (use TemporaryDirectory.cleanup())
         d = mkdtemp(prefix='flatdir-')
         self.data_path = Path(d)
+        #print('SET UP DATA PATH AT', self.data_path)
+
         # self.data_path = Path('data')
-        print('SET UP DATA PATH AT', self.data_path)
         #self.data_path.mkdir(exist_ok=True)
         #for path in ['localhost.html', 'localhost.json']:
         #    (self.data_path / path).unlink(missing_ok=True)
@@ -69,34 +74,37 @@ class CompanyTest(TestCase):
         self.directory = Directory([Company(urljoin(self.URL, 'index.html'), *self.PATHS)],
                                    data_path=self.data_path)
 
+    @staticmethod
     def tearDownClass() -> None:
         CompanyTest.server.shutdown()
 
     def test_update(self) -> None:
-        print('COMPANY NOW', CompanyTest.NOW, CompanyTest.NOW.tzinfo)
-        self.directory.now = fixed_time(CompanyTest.NOW)
+        #print('COMPANY NOW', CompanyTest.NOW, CompanyTest.NOW.tzinfo)
+        self.directory.now = fixed_time(CompanyTest.NOW) # type: ignore[assignment]
         company = self.directory.companies[0]
         company.update()
         ads = company.get_ads()
-        print('LOADTIME', ads[0].time, ads[0].time.tzinfo)
+        #print('LOADTIME', ads[0].time, ads[0].time.tzinfo)
         self.assertEqual(ads, CompanyTest.ADS)
         self.assertTrue(company.is_ok())
+        #self.assertTrue(False)
 
     def test_update_again(self) -> None:
         company = self.directory.companies[0]
-        self.directory.now = fixed_time(CompanyTest.NOW)
+        self.directory.now = fixed_time(CompanyTest.NOW) # type: ignore[assignment]
         company.update()
-        self.directory.now = fixed_time(CompanyTest.NOW + timedelta(hours = 5))
+        self.directory.now = fixed_time(CompanyTest.NOW + timedelta(hours = 5)) # type: ignore[assignment]
         company.update()
         ads = company.get_ads()
         self.assertEqual(ads, CompanyTest.ADS)
+        self.assertTrue(False)
 
     PATHS = ('.//li', 'a/@href', 'a', "span[@class='location']", "span[@class='rooms']")
 
     def test_query(self) -> None:
         directory = Directory([Company(urljoin(self.URL, 'index.html'), *self.PATHS)],
                               data_path=self.data_path)
-        directory.now = fixed_time(CompanyTest.NOW)
+        directory.now = fixed_time(CompanyTest.NOW) # type: ignore[assignment]
         ads = directory.companies[0].query()
         self.assertEqual(ads, CompanyTest.ADS)
 
@@ -121,7 +129,7 @@ class CompanyTest(TestCase):
         company = Company(urljoin(self.URL, 'ads.json'), 'flats.*', 'url', 'title', 'location',
                          'rooms')
         directory = Directory([company], data_path=self.data_path)
-        directory.now = fixed_time(CompanyTest.NOW)
+        directory.now = fixed_time(CompanyTest.NOW) # type: ignore[assignment]
 
         ads = directory.companies[0].query()
         self.assertEqual(ads, CompanyTest.ADS)

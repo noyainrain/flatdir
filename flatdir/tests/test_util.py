@@ -1,9 +1,38 @@
 # TODO
 
+from pathlib import Path
 from unittest import TestCase
+from tempfile import TemporaryDirectory
 from typing import cast
+from xml.etree import ElementTree
+from importlib import resources
 
-from flatdir.util import query_json
+from flatdir.util import query_json, query_xml, copy_package
+
+class TestCopyPackage(TestCase):
+    # file -> _ / file : copy exists
+    # dir -> _ / dir : dir exists, file inside exists
+
+    # wrong time (dir-file or file-dir)
+    # parent not existing
+    # access
+    # all os errors
+
+    def setUp(self) -> None:
+        self.dir = TemporaryDirectory()
+
+    def tearDown(self) -> None:
+        self.dir.cleanup()
+
+    def test(self) -> None:
+        path = Path(self.dir.name)
+        copy_package(resources.files(f'{__package__}.res') / 'cats', path)
+        self.assertEqual(list(path.iterdir()), [path / 'cat.txt', path / 'z']) # type: ignore[misc]
+        self.assertEqual((path / 'cat.txt').read_text(), 'Meow!\n')
+
+    def test_bad_dest_type(self) -> None:
+        with self.assertRaises(IsADirectoryError):
+            copy_package(resources.files(f'{__package__}.res') / 'cats' / 'cat.txt', self.dir.name)
 
 class QueryJSONTest(TestCase):
     def setUp(self) -> None:
@@ -35,3 +64,24 @@ class QueryJSONTest(TestCase):
     def test_missing(self) -> None:
         with self.assertRaisesRegex(LookupError, 'foo'):
             query_json(self.cats, 'cats.0.foo')
+
+class QueryXMLTest(TestCase):
+    def setUp(self) -> None:
+        self.tree = ElementTree.fromstring(
+            '<cats><cat name="Happy" />foo<cat name="Grumpy"></cat></cats>')
+
+    def test(self) -> None:
+        nodes = query_xml(self.tree, 'cat')
+        self.assertEqual(nodes, self.tree[:])
+
+    def test_attr(self) -> None:
+        nodes = query_xml(self.tree, 'cat/@name')
+        self.assertEqual(
+            [ElementTree.tostring(node, encoding='unicode') for node in nodes], # type: ignore[misc]
+            ['<name>Happy</name>', '<name>Grumpy</name>']) # type: ignore[misc]
+
+    def test_tail(self) -> None:
+        nodes = query_xml(self.tree, 'cat/tail()')
+        self.assertEqual(
+            [ElementTree.tostring(node, encoding='unicode') for node in nodes], # type: ignore[misc]
+            ['<#text>foo</#text>']) # type: ignore[misc]
