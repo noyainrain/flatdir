@@ -249,7 +249,14 @@
                         <h2>{{ ad.title }}</h2>
                         <p class="tags">
                             <span>{{ ad.location }}</span>
-                            <span>{{ ad.rooms }} rooms</span>
+                            <span>
+                                {{ '{:g}'.format(ad.rooms) }}
+                                {% if ad.rooms == 1 %}
+                                    room
+                                {% else %}
+                                    rooms
+                                {% endif %}
+                            </span>
                         </p>
                         <aside>
                             {{ ad.time.strftime('%d %b %Y') }} from {{ ad.host }}

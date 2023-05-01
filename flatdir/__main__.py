@@ -1,22 +1,21 @@
 # TODO
 
+"""TODO."""
+
 from argparse import ArgumentParser
-from configparser import ConfigParser, ParsingError, DuplicateSectionError, DuplicateOptionError
+from configparser import ConfigParser, ParsingError
 from dataclasses import dataclass
 from importlib import resources
 import logging
-from logging import getLogger, StreamHandler
+from logging import getLogger
 from pathlib import Path
-import re
 import sys
+from typing import cast
 
 from jinja2 import Environment, FileSystemLoader
 
 from .directory import Company, Directory
-
-from .util import ColorFormatter, color_stream_handler, copy_package
-
-from typing import cast
+from .util import color_stream_handler, copy_package
 
 @dataclass
 class _Namespace:

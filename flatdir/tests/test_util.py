@@ -1,5 +1,7 @@
 # TODO
 
+# pylint: disable=missing-docstring
+
 from pathlib import Path
 from unittest import TestCase
 from tempfile import TemporaryDirectory
@@ -19,6 +21,7 @@ class TestCopyPackage(TestCase):
     # all os errors
 
     def setUp(self) -> None:
+        # pylint: disable=consider-using-with
         self.dir = TemporaryDirectory()
 
     def tearDown(self) -> None:

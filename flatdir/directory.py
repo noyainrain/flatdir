@@ -13,6 +13,7 @@ import json
 from logging import getLogger
 from os import PathLike
 from pathlib import Path
+import re
 from typing import TypeVar, cast, overload
 from urllib.parse import urljoin, urlsplit
 from urllib.request import urlopen
@@ -29,6 +30,42 @@ ONLINE_THRESHOLD = timedelta(hours=1, minutes=30)
 
 _T = TypeVar('_T')
 _U = TypeVar('_U')
+
+@dataclass
+class Ad:
+    """Flat ad.
+
+    .. attribute:: url
+
+       URL of the ad.
+
+    .. attribute:: title
+
+       Title of the ad.
+
+    .. attribute:: location
+
+       Location of the flat.
+
+    .. attribute:: rooms
+
+       Number of rooms of the flat.
+
+    .. attribute:: time
+
+       TODO.
+    """
+
+    url: str
+    title: str
+    location: str
+    rooms: float
+    time: datetime
+
+    def __post_init__(self) -> None:
+        self.host = urlsplit(self.url).hostname
+        if not self.host:
+            raise ValueError(f'Bad URL {self.url}')
 
 class Company:
     """Real estate company.
@@ -103,11 +140,85 @@ class Company:
 
     def _parse_html(self, data: bytes) -> list[Ad]:
         # TODO
-        return []
+        tree = html5lib.parse(data, namespaceHTMLElements=False)
+        # Strict parsing fails for 6 of 7 companies lol ;)
+        #try:
+        #    tree = HTMLParser(strict=True, namespaceHTMLElements=False).parse(data)
+        #except ParseError as e:
+        #    raise ValueError('Bad HTML') from e
+
+        def select(elem: Element, path: str) -> str:
+            try:
+                node = query_xml(elem, path)[0]
+            except IndexError:
+                raise LookupError(path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>")
+            return node.text or '' # TODO itertext()
+
+        nodes = query_xml(tree, self.ad_path)
+        return [
+            Ad(
+                urljoin(self.url, select(node, self.url_path)),
+                (select(node, self.title_path) or '?').strip(),
+                (select(node, self.location_path) or '?').strip(),
+                # int((find_node(node, self.rooms_node).tail or '').strip() or '0'),
+                self._fuzzy_float(select(node, self.rooms_path)),
+                self.directory.now())
+            for node in nodes]
 
     def _parse_json(self, data: bytes) -> list[Ad]:
-        # TODO
-        return []
+        # TODO if this fails - validation error for encoding or not a dict
+        result = cast(object, json.loads(data))
+        assert isinstance(result, dict)
+
+        @overload
+        def lookup(data: dict[str, object], path: str, typ: type[_T]) -> _T:
+            pass
+        @overload
+        def lookup(data: dict[str, object], path: str,
+                   typ: tuple[type[_T], type[_U]]) -> _T | _U:
+            pass
+        def lookup(data: dict[str, object], path: str,
+                   typ: type[_T] | tuple[type[_T], type[_U]]) -> _T | _U:
+            try:
+                return query_json(data, path, typ)[0]
+            except IndexError:
+                raise LookupError(path) from None
+
+        # TODO type should be a list here, right?
+        item_data = query_json(result, self.ad_path, dict)
+        items = cast(list[dict[str, object]], item_data)
+
+        #for item in item_data:
+        #    if not isinstance(item, dict):
+        #        raise LookupError(f'Bad element type {type(item).__name__} at {self.node}')
+        #items = cast(list[dict[str, object]], item_data)
+        ## TODO (its okay to parse from data: object because its internal method)
+        #def parse_ad(data: object) -> None:
+        #def extract_ad(data: object) -> None:
+        #    pass
+
+        # float, int, bool
+        # None
+        # {}, [] => [3, 'lol', True]
+
+        return [
+            Ad(
+                urljoin(self.url, lookup(item, self.url_path, str)),
+                lookup(item, self.title_path, str) or '?',
+                lookup(item, self.location_path, str) or '?',
+                # str(lookup(item, self.rooms_path, (str, int))),
+                (self._fuzzy_float(x)
+                 if isinstance(x := lookup(item, self.rooms_path, (str, int)), str) else x),
+                self.directory.now())
+            for item in items]
+
+    @staticmethod
+    def _fuzzy_float(value: str) -> float:
+        match = re.search(r'\d+(\.\d+)?', value)
+        #print('MATCHED', match and match[0], ' IN ', value)
+        if not match:
+            return 0
+        return float(match[0])
 
     def query(self) -> list[Ad]:
         """TODO."""
@@ -158,122 +269,9 @@ class Company:
             data = f.read()
 
         if ext == 'json':
-            # TODO if this fails - validation error for encoding or not a dict
-            result = cast(object, json.loads(data))
-            assert isinstance(result, dict)
-
-            #def lookup(data: dict[str, object], path: str, typ: type | tuple[type] = str) -> str:
-            #    try:
-            #        value = data[path]
-            #    except KeyError:
-            #        raise LookupError(path) from None
-            #    if not isinstance(value, typ):
-            #        raise LookupError(f'wrong type {type(value).__name__} for {path}')
-            #    return value
-
-            @overload
-            def lookup(data: dict[str, object], path: str, typ: type[_T]) -> _T:
-                pass
-            @overload
-            def lookup(data: dict[str, object], path: str,
-                       typ: tuple[type[_T], type[_U]]) -> _T | _U:
-                pass
-            def lookup(data: dict[str, object], path: str,
-                       typ: type[_T] | tuple[type[_T], type[_U]]) -> _T | _U:
-                try:
-                    return query_json(data, path, typ)[0]
-                except IndexError:
-                    raise LookupError(path) from None
-
-            # item_data = lookup(result, self.node, typ=list)
-
-            item_data = query_json(result, self.ad_path, dict)
-            items = cast(list[dict[str, object]], item_data)
-
-            #for item in item_data:
-            #    if not isinstance(item, dict):
-            #        raise LookupError(f'Bad element type {type(item).__name__} at {self.node}')
-            #items = cast(list[dict[str, object]], item_data)
-
-            ## TODO (its okay to parse from data: object because its internal method)
-            #def parse_ad(data: object) -> None:
-            #def extract_ad(data: object) -> None:
-            #    pass
-
-            # float, int, bool
-            # None
-            # {}, [] => [3, 'lol', True]
-            ads = [
-                Ad(
-                    urljoin(self.url, lookup(item, self.url_path, str)),
-                    lookup(item, self.title_path, str) or '?',
-                    lookup(item, self.location_path, str),
-                    str(lookup(item, self.rooms_path, (str, int))),
-                    self.directory.now())
-                for item in items]
-
+            ads = self._parse_json(data)
         else:
-            tree = html5lib.parse(data, namespaceHTMLElements=False)
-            # Strict parsing fails for 6 of 7 companies lol ;)
-            #try:
-            #    tree = HTMLParser(strict=True, namespaceHTMLElements=False).parse(data)
-            #except ParseError as e:
-            #    raise ValueError('Bad HTML') from e
-
-            #def find_node(elem: Element, path: str) -> Element:
-            #    node = elem.find(path)
-            #    if node is None:
-            #        raise LookupError(path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>")
-            #    return node
-
-                #mode = 'text'
-                #if match := re.search(r'/@([^/]+)$', path):
-                #    mode = 'attr'
-                #    attr_name = cast(str, match[1])
-                #    path = path[:match.start()]
-                #elif path.endswith('/text()'):
-                #    mode = 'text'
-                #    path = path[:-7]
-                #elif path.endswith('/tail()'):
-                #    mode = 'tail'
-                #    path = path[:-7]
-                ##else:
-                ##    assert False
-
-                #node = elem.find(path)
-                #if node is None:
-                #    raise LookupError(path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>")
-
-                #if mode == 'attr':
-                #    return node.get(attr_name) or ''
-                #if mode == 'tail':
-                #    return node.tail or ''
-                #if mode == 'text':
-                #    return node.text or ''
-                #return node.text or ''
-
-            def select(elem: Element, path: str) -> str:
-                try:
-                    node = query_xml(elem, path)[0]
-                except IndexError:
-                    raise LookupError(path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>")
-                return node.text or '' # TODO itertext()
-
-            # nodes = tree.findall(self.ad_path)
-            nodes = query_xml(tree, self.ad_path)
-            ads = [
-                Ad(
-                    # urljoin(self.url, find_node(node, self.link_node).get('href')),
-                    # (find_node(node, self.title_node).text or '?').strip(),
-                    # (find_node(node, self.location_node).text or '?').strip(),
-                    urljoin(self.url, select(node, self.url_path)),
-                    (select(node, self.title_path) or '?').strip(),
-                    (select(node, self.location_path) or '?').strip(),
-                    # int((find_node(node, self.rooms_node).tail or '').strip() or '0'),
-                    # (find_node(node, self.rooms_node).tail or '').strip() or '?',
-                    select(node, self.rooms_path).strip() or '',
-                    self.directory.now())
-                for node in nodes]
+            ads = self._parse_html(data)
 
         ads = [ad for ad in ads if ad.rooms]
         if self.location_filter:
@@ -314,47 +312,11 @@ class Company:
         try:
             with self._ads_path.open(encoding='utf-8') as f:
                 return [
-                    Ad(row['url'], row['title'], row['location'], row['rooms'],
+                    Ad(row['url'], row['title'], row['location'], float(row['rooms']),
                        datetime.fromisoformat(row['time']))
                     for row in cast(Iterable[dict[str, str]], csv.DictReader(f))]
         except FileNotFoundError:
             return []
-
-@dataclass
-class Ad:
-    """Flat ad.
-
-    .. attribute:: url
-
-       URL of the ad.
-
-    .. attribute:: title
-
-       Title of the ad.
-
-    .. attribute:: location
-
-       Location of the flat.
-
-    .. attribute:: rooms
-
-       Number of rooms of the flat.
-
-    .. attribute:: time
-
-       TODO.
-    """
-
-    url: str
-    title: str
-    location: str
-    rooms: str
-    time: datetime
-
-    def __post_init__(self) -> None:
-        self.host = urlsplit(self.url).hostname
-        if not self.host:
-            raise ValueError(f'Bad URL {self.url}')
 
 class Directory:
     """Directory of available flats from different real estate companies.
@@ -398,9 +360,6 @@ class Directory:
         for company in companies:
             company.directory = self
 
-    def now(self) -> datetime:
-        return datetime.now()
-
     def get_ads(self) -> list[Ad]:
         """Get currently available flats."""
         return [ad for company in self.companies for ad in company.get_ads()]
@@ -425,6 +384,10 @@ class Directory:
             # make all paths valid OR check syntax in __init__
             #except SyntaxError as e:
             #    logger.error('Bad path for %s (%s)', company.host, e)
+
+    def now(self) -> datetime:
+        """TODO."""
+        return datetime.now()
 
 # request -> HTML
 # parse -> [ads]

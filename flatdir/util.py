@@ -195,6 +195,7 @@ class ColorFormatter(Formatter):
         self, fmt: str | None = None, datefmt: str | None = None, style: _FormatStyle = '%',
         validate: bool = True, *, colors: Mapping[int, Color] = DEFAULT_COLORS,
     ) -> None:
+        # pylint: disable=dangerous-default-value
         super().__init__(fmt, datefmt, style, validate)
         self.colors = dict(colors)
 
@@ -213,6 +214,7 @@ def color_stream_handler(
 
     If *stream* is not connected to a terminal, the standard :cls:`Formatter` is used.
     """
+    # pylint: disable=dangerous-default-value
     handler = StreamHandler(stream)
     formatter = (ColorFormatter(fmt, datefmt, style, validate, colors=colors) if stream.isatty()
                  else Formatter(fmt, datefmt, style, validate))
