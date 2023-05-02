@@ -28,16 +28,23 @@ def fixed_time(time: datetime) -> Callable[[], datetime]:
         return time
     return f
 
+from contextlib import AbstractContextManager
+
 class BaseTestCase(TestCase):
     URL = 'http://localhost:16080'
 
     server: ClassVar[HTTPServer]
+    # root_manager: AbstractContextManager[Path]
 
     @staticmethod
     def setUpClass() -> None:
         logging.disable()
-        handler = partial(HTTPRequestHandler, #SimpleHTTPRequestHandler,
-                          directory=resources.path('flatdir.tests.res', '.'))
+
+        # BaseTestCase.root_manager = resources.path('flatdir.tests.res', '.')
+        # root = BaseTestCase.root_manager.__enter__()
+        # handler = partial(HTTPRequestHandler, directory=root)
+
+        handler = partial(HTTPRequestHandler, directory=resources.files('flatdir.tests.res'))
         BaseTestCase.server = HTTPServer(('', 16080), handler)
         def serve() -> None:
             BaseTestCase.server.serve_forever()
@@ -48,6 +55,9 @@ class BaseTestCase(TestCase):
     def tearDownClass() -> None:
         BaseTestCase.server.shutdown()
         BaseTestCase.server.server_close()
+
+        # BaseTestCase.root_manager.__exit__(None, None, None)
+
         #from time import sleep
         #sleep(1)
         # BaseTestCase.server = None
