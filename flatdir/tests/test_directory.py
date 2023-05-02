@@ -5,6 +5,7 @@
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+import logging
 from threading import Thread
 from tempfile import TemporaryDirectory
 from typing import ClassVar
@@ -34,6 +35,7 @@ class BaseTestCase(TestCase):
 
     @staticmethod
     def setUpClass() -> None:
+        logging.disable()
         handler = partial(HTTPRequestHandler, #SimpleHTTPRequestHandler,
                           directory=resources.path('flatdir.tests.res', '.'))
         BaseTestCase.server = HTTPServer(('', 16080), handler)

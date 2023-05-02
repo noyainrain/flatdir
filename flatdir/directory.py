@@ -20,8 +20,6 @@ from urllib.request import urlopen
 from xml.etree.ElementTree import Element
 
 import html5lib
-from html5lib import HTMLParser
-from html5lib.html5parser import ParseError
 
 from .util import query_json, query_xml
 
@@ -151,7 +149,10 @@ class Company:
             try:
                 node = query_xml(elem, path)[0]
             except IndexError:
-                raise LookupError(path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>")
+                # TODO serialize tag with quotes around attrs
+                raise LookupError(
+                    path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>"
+                ) from None
             return node.text or '' # TODO itertext()
 
         nodes = query_xml(tree, self.ad_path)
@@ -182,6 +183,7 @@ class Company:
             try:
                 return query_json(data, path, typ)[0]
             except IndexError:
+                # TODO serialize data
                 raise LookupError(path) from None
 
         # TODO type should be a list here, right?
@@ -235,7 +237,8 @@ class Company:
         # the path and the modified time, but not ext, because that can be extracted
         # or even better like get_mtime_fallback_to_multiple_files(file1, file2, ...):
         #cache_time = None
-        #paths = (self.director.data_path / f'{self.host}.json', self.directory.data_path / f'{self.host}.html')
+        #paths = (self.director.data_path / f'{self.host}.json', self.directory.data_path /
+        # f'{self.host}.html')
         #for cache_path in paths:
         #    try:
         #        cache_time = ...

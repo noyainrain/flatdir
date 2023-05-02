@@ -1,0 +1,22 @@
+name: Check code
+on:
+    - push
+    - pull_request
+jobs:
+    check:
+        strategy:
+            matrix:
+                python:
+                    - "3.9"
+                    - "3.10"
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - uses: actions/setup-python@v4
+              with:
+                  python-version: ${{ matrix.python }}
+            - run: make deps deps-dev
+            - run: make type
+            - run: make test
+            - run: make lint
+              continue-on-error: ${{ contains(github.event.head_commit.message, 'WIP') }}
