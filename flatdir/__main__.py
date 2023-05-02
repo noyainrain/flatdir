@@ -100,7 +100,9 @@ def main() -> int:
     copy_package(res / 'fonts', web_path / 'fonts')
     copy_package(res / 'images', web_path / 'images')
 
-    loader = FileSystemLoader('.')
+    # loader = FileSystemLoader('.')
+    # TODO PackageLoader
+    loader = FileSystemLoader(str(res))
     env = Environment(loader=loader)
     template = env.get_template('template.html')
     index_path = web_path / 'index.html'

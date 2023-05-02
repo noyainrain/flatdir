@@ -27,19 +27,19 @@ deps:
 deps-dev:
 	$(PIP) install $(PIPFLAGS) --requirement requirements-dev.txt
 
+FONTSMODULE=node_modules/@fontsource/noto-sans
+FONTSRESOURCE=flatdir/res/fonts
 .PHONY: fonts
 fonts:
-	$(NPM) $(NPMFLAGS) install
-	mkdir -p flatdir/res/fonts/files
-	cp node_modules/@fontsource/noto-sans/400.css flatdir/res/fonts/
-	cp node_modules/@fontsource/noto-sans/600.css flatdir/res/fonts/
-	cp node_modules/@fontsource/noto-sans/files/noto-sans-*-400-normal.woff2 \
-	    flatdir/res/fonts/files/
-	cp node_modules/@fontsource/noto-sans/files/noto-sans-*-600-normal.woff2 \
-	    flatdir/res/fonts/files/
-	@#rm flatdir/res/fonts
-	@#cp -r node_modules/@fontsource/noto-sans flatdir/res/fonts
+	@# Work around npm 7 update modifying package.json (see https://github.com/npm/cli/issues/3044)
+	$(NPM) install $(NPMFLAGS)
+	mkdir --parents $(FONTSRESOURCE)/files
+	cp $(FONTSMODULE)/400.css $(FONTSMODULE)/600.css $(FONTSRESOURCE)/
+	cp $(FONTSMODULE)/files/noto-sans-*-400-normal.woff2 \
+	    $(FONTSMODULE)/files/noto-sans-all-400-normal.woff \
+	    $(FONTSMODULE)/files/noto-sans-*-600-normal.woff2 \
+	    $(FONTSMODULE)/files/noto-sans-all-600-normal.woff $(FONTSRESOURCE)/files/
 
 .PHONY: clean
 clean:
-	rm --recursive --force $$(find . -name __pycache__) .mypy_cache
+	rm --recursive --force $$(find . -name __pycache__) .mypy_cache node_modules

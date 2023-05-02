@@ -1,5 +1,5 @@
 __pycache__/
-/node_modules/
 /flatdir.ini
 /data/
 /.mypy_cache/
+/node_modules/
