@@ -2,6 +2,8 @@
 
 """TODO."""
 
+from __future__ import annotations
+
 from argparse import ArgumentParser
 from configparser import ConfigParser, ParsingError
 from dataclasses import dataclass
