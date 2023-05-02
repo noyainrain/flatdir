@@ -13,6 +13,8 @@
    Custom foreground color graphic rendition.
 """
 
+from __future__ import annotations
+
 from collections.abc import Mapping
 from enum import Enum
 from importlib.abc import Traversable

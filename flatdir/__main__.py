@@ -94,7 +94,9 @@ def main() -> int:
 
     web_path = directory.data_path / 'web'
     web_path.mkdir(exist_ok=True)
-    copy_package(resources.files('flatdir.res') / 'fonts', web_path / 'fonts')
+    res = resources.files('flatdir.res')
+    copy_package(res / 'fonts', web_path / 'fonts')
+    copy_package(res / 'images', web_path / 'images')
 
     loader = FileSystemLoader('.')
     env = Environment(loader=loader)
