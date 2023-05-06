@@ -88,6 +88,10 @@ class Company:
 
        Subpath to the number of rooms of a flat.
 
+    .. attribute:: rooms_optional
+
+       Ignore entries, that don't have a room count entry.
+
     .. attribute:: location_filter
 
        Term that the location of a flat needs to contain to be included.
@@ -100,7 +104,7 @@ class Company:
     TIMEOUT: ClassVar[timedelta] = timedelta(hours=1, minutes=30)
 
     def __init__(self, url: str, ad_path: str, url_path: str, title_path: str, location_path: str,
-                 rooms_path: str, *, location_filter: str = '') -> None:
+                 rooms_path: str, *, rooms_optional: bool = False, location_filter: str = '') -> None:
         components = urlsplit(url)
         if not (components.scheme and components.hostname):
             raise ValueError(f'Relative url {url}')
@@ -111,6 +115,7 @@ class Company:
         self.title_path = title_path
         self.location_path = location_path
         self.rooms_path = rooms_path
+        self.rooms_optional = rooms_optional
         self.location_filter = location_filter
 
         self._directory: Directory | None = None
@@ -205,13 +210,16 @@ class Company:
 
     # REVIEWED
     def _parse_html(self, data: bytes) -> list[Ad]:
-        def query(element: Element, path: str) -> str:
+        def query(element: Element, path: str, optional: bool = False) -> str:
             try:
                 element = query_xml(element, path)[0]
             except IndexError:
-                xml = ElementTree.tostring(Element(element.tag, attrib=element.attrib),
-                                           encoding='unicode')
-                raise LookupError(f'No {path} in {xml}') from None
+                if optional:
+                    return ''
+                else:
+                    xml = ElementTree.tostring(Element(element.tag, attrib=element.attrib),
+                                               encoding='unicode')
+                    raise LookupError(f'No {path} in {xml}') from None
             return ''.join(element.itertext())
 
         # Unfortunately strict parsing fails for most real-world companies
@@ -222,7 +230,7 @@ class Company:
                 urljoin(self.url, query(element, self.url_path)),
                 query(element, self.title_path).strip() or '?',
                 query(element, self.location_path).strip() or '?',
-                self._fuzzy_float(query(element, self.rooms_path)), self.directory.now())
+                self._fuzzy_float(query(element, self.rooms_path, self.rooms_optional)), self.directory.now())
             for element in elements]
 
     def _parse_json(self, data: bytes) -> list[Ad]:

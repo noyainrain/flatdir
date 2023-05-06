@@ -60,9 +60,11 @@ def main() -> int:
         if name.startswith('company:'):
             try:
                 url = options['url']
+                rooms_optional_str: str = options.get('rooms_optional', fallback='False')
+                rooms_optional: bool = rooms_optional_str == 'True'
                 company = Company(
                     url, options['ad_path'], options['url_path'], options['title_path'],
-                    options['location_path'], options['rooms_path'],
+                    options['location_path'], options['rooms_path'], rooms_optional=rooms_optional,
                     location_filter=cast(str, options.get('location_filter', '')))
             except KeyError as e:
                 logger.critical('Failed to load config file %s (Missing [%s] %s)', config_path,
