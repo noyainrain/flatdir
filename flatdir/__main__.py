@@ -30,8 +30,11 @@ def main() -> int:
         handlers=[color_stream_handler(fmt='%(asctime)s %(levelname)s %(name)s: %(message)s')])
     logger = getLogger(__name__)
 
-    parser = ArgumentParser()
-    parser.add_argument('config', nargs='?')
+    parser = ArgumentParser(
+        prog='python3 -m flatdir',
+        description='Web aggregator of flat ads from different real estate companies.')
+    parser.add_argument('config', nargs='?',
+                        help='Path to config file. By default flatdir.ini, if present.')
     args = parser.parse_args(namespace=_Namespace)
 
     config = ConfigParser(strict=False)

@@ -1,6 +1,6 @@
 # Contributing to flatdir
 
-## How to contribute
+## How to Contribute
 
 Would you like to contribute to flatdir? Awesome! 💖
 
@@ -16,10 +16,10 @@ Would you like to contribute to flatdir? Awesome! 💖
 A good issue description contains:
 
 * If the API is modified, any class or function signature
-* If the UI is modified, an outline of the text
-* If a dependency is introduced, the reason why it is a better choice than alternatives
+* If the UI is modified, a simple sketch
+* If a dependency is introduced, the rationale why it is a better choice than alternatives
 
-## Installing development dependencies
+## Installing Development Dependencies
 
 To install all development dependencies, run:
 
@@ -27,7 +27,7 @@ To install all development dependencies, run:
 make deps-dev
 ```
 
-## Running code checks
+## Running Code Checks
 
 To run all unit tests, use:
 

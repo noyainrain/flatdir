@@ -1,6 +1,4 @@
-# TODO
-
-"""TODO."""
+"""Flat ad directory logic."""
 
 from __future__ import annotations
 
@@ -10,24 +8,22 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http.client import HTTPResponse
 import json
+from json import JSONDecodeError
 from logging import getLogger
 from os import PathLike
 from pathlib import Path
 import re
-from typing import TypeVar, cast, overload
+from typing import ClassVar, cast
 from urllib.parse import urljoin, urlsplit
 from urllib.request import urlopen
+from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
 import html5lib
 
 from .util import query_json, query_xml
 
-ONLINE_THRESHOLD = timedelta(hours=1, minutes=30)
-# ONLINE_THRESHOLD = timedelta(hours=0, minutes=1)
-
-_T = TypeVar('_T')
-_U = TypeVar('_U')
+# CONTINUE REVIEW
 
 @dataclass
 class Ad:
@@ -95,7 +91,13 @@ class Company:
     .. attribute:: location_filter
 
        Term that the location of a flat needs to contain to be included.
+
+    .. attribute:: TIMEOUT
+
+       Time since the last successful update after which the company is considered unavailable.
     """
+
+    TIMEOUT: ClassVar[timedelta] = timedelta(hours=1, minutes=30)
 
     def __init__(self, url: str, ad_path: str, url_path: str, title_path: str, location_path: str,
                  rooms_path: str, *, location_filter: str = '') -> None:
@@ -132,95 +134,9 @@ class Company:
         """TODO."""
         try:
             return (self.directory.now() - datetime.fromtimestamp(self._ads_path.stat().st_mtime)
-                    < ONLINE_THRESHOLD)
+                    < Company.TIMEOUT)
         except FileNotFoundError:
             return False
-
-    def _parse_html(self, data: bytes) -> list[Ad]:
-        # TODO
-        tree = html5lib.parse(data, namespaceHTMLElements=False)
-        # Strict parsing fails for 6 of 7 companies lol ;)
-        #try:
-        #    tree = HTMLParser(strict=True, namespaceHTMLElements=False).parse(data)
-        #except ParseError as e:
-        #    raise ValueError('Bad HTML') from e
-
-        def select(elem: Element, path: str) -> str:
-            try:
-                node = query_xml(elem, path)[0]
-            except IndexError:
-                # TODO serialize tag with quotes around attrs
-                raise LookupError(
-                    path, f"<{elem.tag} {' '.join('='.join(x) for x in elem.attrib.items())}>"
-                ) from None
-            return node.text or '' # TODO itertext()
-
-        nodes = query_xml(tree, self.ad_path)
-        return [
-            Ad(
-                urljoin(self.url, select(node, self.url_path)),
-                (select(node, self.title_path) or '?').strip(),
-                (select(node, self.location_path) or '?').strip(),
-                # int((find_node(node, self.rooms_node).tail or '').strip() or '0'),
-                self._fuzzy_float(select(node, self.rooms_path)),
-                self.directory.now())
-            for node in nodes]
-
-    def _parse_json(self, data: bytes) -> list[Ad]:
-        # TODO if this fails - validation error for encoding or not a dict
-        result = cast(object, json.loads(data))
-        assert isinstance(result, dict)
-
-        @overload
-        def lookup(data: dict[str, object], path: str, typ: type[_T]) -> _T:
-            pass
-        @overload
-        def lookup(data: dict[str, object], path: str,
-                   typ: tuple[type[_T], type[_U]]) -> _T | _U:
-            pass
-        def lookup(data: dict[str, object], path: str,
-                   typ: type[_T] | tuple[type[_T], type[_U]]) -> _T | _U:
-            try:
-                return query_json(data, path, typ)[0]
-            except IndexError:
-                # TODO serialize data
-                raise LookupError(path) from None
-
-        # TODO type should be a list here, right?
-        item_data = query_json(result, self.ad_path, dict)
-        items = cast(list[dict[str, object]], item_data)
-
-        #for item in item_data:
-        #    if not isinstance(item, dict):
-        #        raise LookupError(f'Bad element type {type(item).__name__} at {self.node}')
-        #items = cast(list[dict[str, object]], item_data)
-        ## TODO (its okay to parse from data: object because its internal method)
-        #def parse_ad(data: object) -> None:
-        #def extract_ad(data: object) -> None:
-        #    pass
-
-        # float, int, bool
-        # None
-        # {}, [] => [3, 'lol', True]
-
-        return [
-            Ad(
-                urljoin(self.url, lookup(item, self.url_path, str)),
-                lookup(item, self.title_path, str) or '?',
-                lookup(item, self.location_path, str) or '?',
-                # str(lookup(item, self.rooms_path, (str, int))),
-                (self._fuzzy_float(x)
-                 if isinstance(x := lookup(item, self.rooms_path, (str, int)), str) else x),
-                self.directory.now())
-            for item in items]
-
-    @staticmethod
-    def _fuzzy_float(value: str) -> float:
-        match = re.search(r'\d+(\.\d+)?', value)
-        #print('MATCHED', match and match[0], ' IN ', value)
-        if not match:
-            return 0
-        return float(match[0])
 
     def query(self) -> list[Ad]:
         """TODO."""
@@ -286,6 +202,54 @@ class Company:
         # logger.info('Received %d ad(s) from %s', len(ads), self.host)
 
         return ads
+
+    # REVIEWED
+    def _parse_html(self, data: bytes) -> list[Ad]:
+        def query(element: Element, path: str) -> str:
+            try:
+                element = query_xml(element, path)[0]
+            except IndexError:
+                xml = ElementTree.tostring(Element(element.tag, attrib=element.attrib),
+                                           encoding='unicode')
+                raise LookupError(f'No {path} in {xml}') from None
+            return ''.join(element.itertext())
+
+        # Unfortunately strict parsing fails for most real-world companies
+        tree = html5lib.parse(data, namespaceHTMLElements=False)
+        elements = query_xml(tree, self.ad_path)
+        return [
+            Ad(
+                urljoin(self.url, query(element, self.url_path)),
+                query(element, self.title_path).strip() or '?',
+                query(element, self.location_path).strip() or '?',
+                self._fuzzy_float(query(element, self.rooms_path)), self.directory.now())
+            for element in elements]
+
+    def _parse_json(self, data: bytes) -> list[Ad]:
+        try:
+            root = cast(object, json.loads(data))
+        except JSONDecodeError as e:
+            raise ValueError(f'Bad document line {e.lineno}') from e
+        if not isinstance(root, dict):
+            raise ValueError(f'Bad document root type {type(root).__name__}')
+
+        values = cast(list[dict[str, object]], query_json(root, self.ad_path, dict))
+        return [
+            Ad(
+                urljoin(self.url, query_json(value, self.url_path, str)[0]),
+                query_json(value, self.title_path, str)[0].strip() or '?',
+                query_json(value, self.location_path, str)[0].strip() or '?',
+                self._fuzzy_float(query_json(value, self.rooms_path, (str, int, float))[0]),
+                self.directory.now())
+            for value in values]
+
+    @staticmethod
+    def _fuzzy_float(value: str | int | float) -> float:
+        if isinstance(value, str):
+            match = re.search(r'\d+(\.\d+)?', value)
+            value = match[0] if match else 0
+        return float(value)
+    # /REVIEWED
 
     def update(self) -> None:
         """TODO."""
@@ -382,7 +346,7 @@ class Directory:
             #except ValueError as e:
             #    logger.error('Bad HTML for %s (%s)', company.host, e.__cause__)
             # TODO check for JSON error
-            except LookupError as e:
+            except (ValueError, LookupError) as e:
                 logger.error('Failed to parse flat ad of %s (%s)', company.host, e)
             # make all paths valid OR check syntax in __init__
             #except SyntaxError as e:

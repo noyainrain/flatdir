@@ -34,6 +34,7 @@ _FormatStyle = Literal['%', '{', '$']
 
 _T = TypeVar('_T')
 _U = TypeVar('_U')
+V = TypeVar('V')
 
 # p = dest / src.name # should have the same behaviour as below
 
@@ -66,25 +67,35 @@ def copy_package(src: Traversable, dest: PathLike[str] | str) -> None:
     #    #    dest.parent.mkdir(parents=True)
 
 @overload
-def query_json(obj: dict[str, object], path: str) -> list[object]:
+def query_json(value: object, path: str) -> list[object]:
     pass
 @overload
-def query_json(obj: dict[str, object], path: str, typ: type[_T]) -> list[_T]:
+def query_json(value: object, path: str, typ: type[_T]) -> list[_T]:
     pass
 @overload
-def query_json(obj: dict[str, object], path: str, typ: tuple[type[_T], type[_U]]) -> list[_T | _U]:
+def query_json(value: object, path: str, typ: tuple[type[_T], type[_U]]) -> list[_T | _U]:
+    pass
+@overload
+def query_json(value: object, path: str,
+               typ: tuple[type[_T], type[_U], type[V]]) -> list[_T | _U | V]:
     pass
 def query_json(
-    obj: dict[str, object], path: str, typ: type[_T] | tuple[type[_T], type[_U]] | None = None
-) -> list[object] | list[_T] | list[_T | _U]:
-    """TODO."""
+    value: object, path: str,
+    typ: type[_T] | tuple[type[_T], type[_U]] | tuple[type[_T], type[_U], type[V]] | None = None
+) -> list[object] | list[_T] | list[_T | _U] | list[_T | _U | V]:
+    """Query all items of the JSON collection *value* matching *path*.
+
+    *path* is a dotted path, where `*` matches all items of a collection. If *path* cannot be
+    followed, a :exc:`LookupError` is raised. Optionally, if the results are not of the given type
+    *typ*, a :exc:`ValueError` is raised.
+    """
     tokens = path.split('.')
-    values: list[object] = [obj]
+    values: list[object] = [value]
     for token in tokens:
         level = []
         for value in values:
             if isinstance(value, dict):
-                obj = value
+                obj = cast(dict[str, object], value)
                 if token == '*':
                     level += list(obj.values())
                 else:
@@ -108,11 +119,16 @@ def query_json(
     if typ:
         for value in values:
             if not isinstance(value, typ):
-                raise LookupError('BAD TYPE TODO')
+                raise ValueError(f'Bad value type {type(value).__name__} at {path}')
     return values
 
 def query_xml(node: Element, path: str) -> list[Element]:
-    """TODO."""
+    """Query all children of the XML *element* matching the given *path*.
+
+    *path* is a simplified XPath expression (see
+    https://docs.python.org/3/library/xml.etree.elementtree.html#supported-xpath-syntax).
+    Additionally leaf TODO.
+	"""
     segments = path.split('/')
     leaf: str | None = segments.pop()
     assert leaf

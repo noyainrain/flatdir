@@ -2,9 +2,9 @@
 
 Web aggregator of flat ads from different real estate companies.
 
-You can give it a try at [berlin.flat.directory](https://berlin.flat.directory/).
+You can give it a try at [berlin.flat.directory](https://berlin.flat.directory).
 
-## System requirements
+## System Requirements
 
 The following software must be installed on your system:
 
@@ -12,7 +12,7 @@ The following software must be installed on your system:
 
 flatdir should work on any [POSIX](https://en.wikipedia.org/wiki/POSIX) system.
 
-## Installing dependencies
+## Installing Dependencies
 
 To install all dependencies, run:
 
@@ -28,11 +28,14 @@ To run flatdir, use:
 python3 -m flatdir
 ```
 
-The configuration file `flatdir.ini` is used, if present. See `flatdir/res/default.ini` for
-documentation.
+See `flatdir/res/default.ini` for config file documentation.
+
+## Community
+
+Come join [#flatdir🏠 on the Feini Discord server](https://discord.gg/h7yk8gNdrA)!
 
 ## Contributors
 
 * Sven Pfaller &lt;sven AT inrain.org>
 
-Copyright (C) 2023 flatdir contributors
+Copyright (c) 2023 flatdir contributors
