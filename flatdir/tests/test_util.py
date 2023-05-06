@@ -30,7 +30,7 @@ class TestCopyPackage(TestCase):
     def test(self) -> None:
         path = Path(self.dir.name)
         copy_package(resources.files(f'{__package__}.res') / 'cats', path)
-        self.assertEqual(list(path.iterdir()), [path / 'cat.txt', path / 'z']) # type: ignore[misc]
+        self.assertEqual(set(path.iterdir()), {path / 'cat.txt', path / 'z'}) # type: ignore[misc]
         self.assertEqual((path / 'cat.txt').read_text(), 'Meow!\n')
 
     def test_bad_dest_type(self) -> None:
