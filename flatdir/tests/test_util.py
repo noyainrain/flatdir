@@ -19,8 +19,8 @@ class CopyResourceTest(TestCase):
     def test(self) -> None:
         dst = Path(self.dir.name)
         copy_resource(resources.files(f'{__package__}.res') / 'cats', dst)
-        self.assertEqual(list(dst.iterdir()), # type: ignore[misc]
-                         [dst / 'happy.txt', dst / 'clowder']) # type: ignore[misc]
+        self.assertEqual(set(dst.iterdir()), # type: ignore[misc]
+                         {dst / 'happy.txt', dst / 'clowder'}) # type: ignore[misc]
         self.assertEqual((dst / 'happy.txt').read_text(), 'Meow!\n')
 
     def test_inaccessible_dst(self) -> None:
