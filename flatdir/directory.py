@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 import json
 from json import JSONDecodeError
+from locale import atof, localeconv
 from logging import getLogger
 from os import PathLike
 from pathlib import Path
@@ -324,13 +325,17 @@ class Company:
 
     @staticmethod
     def _fuzzy_float(value: str | int | float) -> float:
-        if isinstance(value, str):
-            match = re.search(r'\d+(\.\d+)?', value)
-            value = match[0] if match else 0
-        return float(value)
+        if isinstance(value, (int, float)):
+            return float(value)
+        conv = cast(dict[str, str], localeconv())
+        decimal, grouping = re.escape(conv['decimal_point']), re.escape(conv['thousands_sep'])
+        match = re.search(rf'[\d{grouping}]+({decimal}\d+)?', value)
+        return atof(match[0]) if match else .0
 
 class Directory:
     """Directory of available flats from different real estate companies.
+
+       Numbers are parsed according to the current locale.
 
     .. attribute:: companies
 
