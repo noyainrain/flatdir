@@ -50,6 +50,10 @@ class Ad:
 
        Number of rooms of the flat.
 
+    .. attribute:: rent
+
+       TODO.
+
     .. attribute:: time
 
        Publication time.
@@ -59,6 +63,7 @@ class Ad:
     title: str
     location: str
     rooms: float
+    rent: float
     time: datetime
 
     def __post_init__(self) -> None:
@@ -103,6 +108,10 @@ class Company:
 
        Subpath to the number of rooms of a flat.
 
+    .. attribute:: rent_path
+
+       TODO.
+
     .. attribute:: location_filter
 
        Term that the location of a flat needs to contain to be included.
@@ -117,7 +126,7 @@ class Company:
     _CACHE_TTL: ClassVar[timedelta] = timedelta(minutes=30)
 
     def __init__(self, url: str, ad_path: str, url_path: str, title_path: str, location_path: str,
-                 rooms_path: str, *, location_filter: str = '') -> None:
+                 rooms_path: str, rent_path: str, *, location_filter: str = '') -> None:
         components = urlsplit(url)
         if not (components.scheme and components.hostname):
             raise ValueError(f'Relative url {url}')
@@ -128,6 +137,7 @@ class Company:
         self.title_path = title_path
         self.location_path = location_path
         self.rooms_path = rooms_path
+        self.rent_path = rent_path
         self.location_filter = location_filter
 
         self._directory: Directory | None = None
@@ -161,6 +171,8 @@ class Company:
             with self._ads_path.open(encoding='utf-8') as f:
                 return [
                     Ad(row['url'], row['title'], row['location'], float(row['rooms']),
+                       # Update on read :)
+                       float(row.get('rent', '0')),
                        datetime.fromisoformat(row['time']))
                     for row in cast(Iterable[dict[str, str]], csv.DictReader(f))]
         except FileNotFoundError:
@@ -172,11 +184,11 @@ class Company:
         ads = [dataclasses.replace(ad, time=old_ads.get(ad.url, ad).time) for ad in self.query()]
 
         with self._ads_path.open('w', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, ['url', 'title', 'location', 'rooms', 'time'])
+            writer = csv.DictWriter(f, ['url', 'title', 'location', 'rooms', 'rent', 'time'])
             writer.writeheader()
             for ad in ads:
                 row = {'url': ad.url, 'title': ad.title, 'location': ad.location, 'rooms': ad.rooms,
-                       'time': ad.time.isoformat()}
+                       'rent': ad.rent, 'time': ad.time.isoformat()}
                 writer.writerow(row)
 
         return ads
@@ -236,7 +248,8 @@ class Company:
                 urljoin(self.url, query(element, self.url_path)),
                 query(element, self.title_path).strip() or '?',
                 query(element, self.location_path).strip() or '?',
-                self._fuzzy_float(query(element, self.rooms_path)), self.directory.now())
+                self._fuzzy_float(query(element, self.rooms_path)),
+                self._fuzzy_float(query(element, self.rent_path)), self.directory.now())
             for element in elements]
 
     def _parse_json(self, data: bytes) -> list[Ad]:
@@ -254,6 +267,7 @@ class Company:
                 query_json(value, self.title_path, str)[0].strip() or '?',
                 query_json(value, self.location_path, str)[0].strip() or '?',
                 self._fuzzy_float(query_json(value, self.rooms_path, (str, int, float))[0]),
+                self._fuzzy_float(query_json(value, self.rent_path, (str, int, float))[0]),
                 self.directory.now())
             for value in values]
 

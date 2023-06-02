@@ -65,7 +65,7 @@ def main(*args: str) -> int:
             try:
                 company = Company(
                     options['url'], options['ad_path'], options['url_path'], options['title_path'],
-                    options['location_path'], options['rooms_path'],
+                    options['location_path'], options['rooms_path'], options['rent_path'],
                     location_filter=cast(str, options.get('location_filter', '')))
             except KeyError as e:
                 logger.critical('Failed to load config file %s ([%s] Missing %s)', config_path,
