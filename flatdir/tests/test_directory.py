@@ -64,7 +64,7 @@ class CompanyTest(TestCase):
 
     def test_update(self) -> None:
         company = Company(f'http://localhost:{self.PORT}/index.html', ".//li[@class='ad']",
-                          'a/@href', 'a', 'span[1]', 'span[2]')
+                          'a/@href', 'a', 'span[1]:[^,]*', 'span[2]')
         directory = Directory([company], data_path=self.data_path)
         directory.now = lambda: self.NOW # type: ignore[method-assign]
 
@@ -75,7 +75,7 @@ class CompanyTest(TestCase):
 
     def test_update_stored_ads(self) -> None:
         company = Company(f'http://localhost:{self.PORT}/index.html', ".//li[@class='ad']",
-                          'a/@href', 'a', 'span[1]', 'span[2]')
+                          'a/@href', 'a', 'span[1]:[^,]*', 'span[2]')
         directory = Directory([company], data_path=self.data_path)
         directory.now = lambda: self.NOW # type: ignore[method-assign]
         company.update()
@@ -87,7 +87,7 @@ class CompanyTest(TestCase):
 
     def test_query(self) -> None:
         company = Company(f'http://localhost:{self.PORT}/index.html', ".//li[@class='ad']",
-                          'a/@href', 'a', 'span[1]', 'span[2]')
+                          'a/@href', 'a', 'span[1]:[^,]*', 'span[2]')
         directory = Directory([company], data_path=self.data_path)
         directory.now = lambda: self.NOW # type: ignore[method-assign]
 
@@ -96,7 +96,7 @@ class CompanyTest(TestCase):
 
     def test_query_json(self) -> None:
         company = Company(f'http://localhost:{self.PORT}/ads.json', 'ads.*', 'url', 'title',
-                          'location', 'rooms')
+                          'location:[^,]*', 'rooms')
         directory = Directory([company], data_path=self.data_path)
         directory.now = lambda: self.NOW # type: ignore[method-assign]
 
@@ -123,9 +123,9 @@ class DirectoryTest(TestCase):
     def test_update(self) -> None:
         companies = [
             Company(f'http://happy.localhost:{self.PORT}/index.html', ".//li[@class='ad']",
-                    'a/@href', 'a', 'span[1]', 'span[2]'),
+                    'a/@href', 'a', 'span[1]:[^,]*', 'span[2]'),
             Company(f'http://grumpy.localhost:{self.PORT}/ads.json', 'ads.*', 'url', 'title',
-                    'location', 'rooms'),
+                    'location:[^,]*', 'rooms'),
             Company(f'http://long.localhost:{self.PORT}/foo', '', '', '', '', '')
         ]
         directory = Directory(companies, data_path=self.data_path)

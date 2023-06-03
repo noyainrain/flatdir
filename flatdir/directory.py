@@ -13,7 +13,7 @@ from logging import getLogger
 from os import PathLike
 from pathlib import Path
 import re
-from typing import ClassVar, cast
+from typing import ClassVar, TypeVar, cast, overload
 from urllib.error import URLError
 from urllib.parse import urljoin, urlsplit
 from urllib.request import urlopen
@@ -24,6 +24,10 @@ from xml.etree.ElementTree import Element
 import html5lib
 
 from .util import query_json, query_xml
+
+_T = TypeVar('_T')
+_U = TypeVar('_U')
+_V = TypeVar('_V')
 
 @dataclass
 class Ad:
@@ -88,19 +92,19 @@ class Company:
 
     .. attribute:: url_path
 
-       Subpath to the URL of an ad.
+       URL field of an ad.
 
     .. attribute:: title_path
 
-       Subpath to the title of an ad.
+       Title field of an ad.
 
     .. attribute:: location_path
 
-       Subpath to the location of a flat.
+       Location field of an ad.
 
     .. attribute:: rooms_path
 
-       Subpath to the number of rooms of a flat.
+       Rooms field of an ad.
 
     .. attribute:: location_filter
 
@@ -218,14 +222,15 @@ class Company:
         return ads
 
     def _parse_html(self, data: bytes) -> list[Ad]:
-        def query(element: Element, path: str) -> str:
+        def query(element: Element, field: str) -> str:
+            path, pattern = self._parse_field(field)
             try:
                 element = query_xml(element, path)[0]
             except IndexError:
                 xml = ElementTree.tostring(Element(element.tag, attrib=element.attrib),
                                            encoding='unicode')
                 raise LookupError(f'No {path} in {xml}') from None
-            return ''.join(element.itertext())
+            return self._query_pattern(''.join(element.itertext()), pattern)
 
         # Unfortunately strict parsing fails for most real-world companies
         tree = html5lib.parse(data, namespaceHTMLElements=False)
@@ -246,15 +251,51 @@ class Company:
         if not isinstance(root, dict):
             raise ValueError(f'Bad document root type {type(root).__name__}')
 
+        @overload
+        def query(value: object, field: str, cls: type[_T]) -> _T:
+            pass
+        @overload
+        def query(value: object, field: str,
+                  cls: tuple[type[_T], type[_U], type[_V]]) -> _T | _U | _V:
+            pass
+        def query(value: object, field: str,
+                  cls: type[_T] | tuple[type[_T], type[_U], type[_V]]) -> _T | _U | _V:
+            path, pattern = self._parse_field(field)
+            value = query_json(value, path, cls)[0]
+            if pattern:
+                if not isinstance(value, str):
+                    raise LookupError(f'No {pattern} in {value}')
+                value = self._query_pattern(value, pattern)
+            return cast('_T | _U | _V', value)
+
         values = cast(list[dict[str, object]], query_json(root, self.ad_path, dict))
         return [
             Ad(
-                urljoin(self.url, query_json(value, self.url_path, str)[0]),
-                query_json(value, self.title_path, str)[0].strip() or '?',
-                query_json(value, self.location_path, str)[0].strip() or '?',
-                self._fuzzy_float(query_json(value, self.rooms_path, (str, int, float))[0]),
+                urljoin(self.url, query(value, self.url_path, str)),
+                query(value, self.title_path, str).strip() or '?',
+                query(value, self.location_path, str).strip() or '?',
+                self._fuzzy_float(query(value, self.rooms_path, (str, int, float))),
                 self.directory.now())
             for value in values]
+
+    @staticmethod
+    def _parse_field(field: str) -> tuple[str, str | None]:
+        tokens = field.split(':', 1)
+        path = tokens[0]
+        try:
+            pattern = tokens[1]
+        except IndexError:
+            pattern = None
+        return path, pattern
+
+    @staticmethod
+    def _query_pattern(text: str, pattern: str | None) -> str:
+        if not pattern:
+            return text
+        match = re.search(pattern, text)
+        if not match:
+            raise LookupError(f'No {pattern} in {text}')
+        return match[0]
 
     @staticmethod
     def _fuzzy_float(value: str | int | float) -> float:

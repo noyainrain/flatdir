@@ -3,12 +3,12 @@
         {
             "url": "mitte.html",
             "title": "Luxurious Lodge",
-            "location": "Mitte",
+            "location": "Mitte, Berlin",
             "rooms": 7
         }, {
             "url": "kreuzberg.html",
             "title": "Cozy Cottage",
-            "location": "Kreuzberg",
+            "location": "Kreuzberg, Berlin",
             "rooms": "Almost 1.5"
         }
     ]
