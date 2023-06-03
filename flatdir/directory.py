@@ -52,7 +52,7 @@ class Ad:
 
     .. attribute:: rent
 
-       TODO.
+       Amount of rent for the flat.
 
     .. attribute:: time
 
@@ -110,7 +110,7 @@ class Company:
 
     .. attribute:: rent_path
 
-       TODO.
+       Rent field of an ad.
 
     .. attribute:: location_filter
 
@@ -283,7 +283,7 @@ class Company:
 class Directory:
     """Directory of available flats from different real estate companies.
 
-       Numbers are parsed according to the current locale.
+       Numbers are parsed and :attr:`currency` is determined according to the current locale.
 
     .. attribute:: companies
 
@@ -300,6 +300,10 @@ class Directory:
     .. attribute:: extra
 
        Any extra information about the directory as HTML.
+
+    .. attribute:: currency
+
+       Sign of the currency in use.
 
     .. attribute:: data_directory
 
@@ -318,6 +322,9 @@ class Directory:
         if not self.description:
             raise ValueError('Blank description')
         self.extra = (extra.strip() or None) if extra else None
+
+        self.currency = cast(str, localeconv()['currency_symbol']) or '¤'
+
         self.data_path = Path(data_path)
 
         self.companies = list(companies)

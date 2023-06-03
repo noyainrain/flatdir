@@ -81,6 +81,7 @@ def main(*args: str) -> int:
     directory_locale = options['locale']
     try:
         setlocale(locale.LC_NUMERIC, directory_locale)
+        setlocale(locale.LC_MONETARY, directory_locale)
     except locale.Error:
         logger.critical('Failed to load config file %s ([flatdir] Unknown locale %s)', config_path,
                         directory_locale)

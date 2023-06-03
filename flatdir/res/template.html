@@ -203,14 +203,16 @@
                         <ul>
                             <li class="tag">{{ ad.location }}</li>
                             <li class="tag">
-                                {{ '{:g}'.format(ad.rooms) }}
+                                {{ '{:n}'.format(ad.rooms) }}
                                 {% if ad.rooms == 1 %}
                                     room
                                 {% else %}
                                     rooms
                                 {% endif %}
                             </li>
-                            <li class="tag">{{ '{:g}'.format(ad.rent) }} €</li>
+                            <li class="tag">
+                                {{ directory.currency }}{{ '{:n}'.format(ad.rent) }}
+                            </li>
                         </ul>
                         <aside>{{ '{:%d %b %Y}'.format(ad.time) }} from {{ ad.host }}</aside>
                     </a>
