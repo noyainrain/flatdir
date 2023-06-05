@@ -106,6 +106,10 @@ class Company:
 
        Rooms field of an ad.
 
+    .. attribute:: rooms_optional
+
+       Indicates that ads without a rooms field should be ignored.
+
     .. attribute:: location_filter
 
        Term that the location of a flat needs to contain to be included.
@@ -119,8 +123,10 @@ class Company:
 
     _CACHE_TTL: ClassVar[timedelta] = timedelta(minutes=30)
 
-    def __init__(self, url: str, ad_path: str, url_path: str, title_path: str, location_path: str,
-                 rooms_path: str, *, location_filter: str = '') -> None:
+    def __init__(
+        self, url: str, ad_path: str, url_path: str, title_path: str, location_path: str,
+        rooms_path: str, *, rooms_optional: bool = False, location_filter: str = ''
+    ) -> None:
         components = urlsplit(url)
         if not (components.scheme and components.hostname):
             raise ValueError(f'Relative url {url}')
@@ -131,6 +137,7 @@ class Company:
         self.title_path = title_path
         self.location_path = location_path
         self.rooms_path = rooms_path
+        self.rooms_optional = rooms_optional
         self.location_filter = location_filter
 
         self._directory: Directory | None = None
@@ -222,15 +229,20 @@ class Company:
         return ads
 
     def _parse_html(self, data: bytes) -> list[Ad]:
-        def query(element: Element, field: str) -> str:
+        def query(element: Element, field: str, *, optional: bool = False) -> str:
             path, pattern = self._parse_field(field)
             try:
-                element = query_xml(element, path)[0]
-            except IndexError:
-                xml = ElementTree.tostring(Element(element.tag, attrib=element.attrib),
-                                           encoding='unicode')
-                raise LookupError(f'No {path} in {xml}') from None
-            return self._query_pattern(''.join(element.itertext()), pattern)
+                try:
+                    element = query_xml(element, path)[0]
+                except IndexError:
+                    xml = ElementTree.tostring(Element(element.tag, attrib=element.attrib),
+                                               encoding='unicode')
+                    raise LookupError(f'No {path} in {xml}') from None
+                return self._query_pattern(''.join(element.itertext()), pattern)
+            except LookupError:
+                if optional:
+                    return ''
+                raise
 
         # Unfortunately strict parsing fails for most real-world companies
         tree = html5lib.parse(data, namespaceHTMLElements=False)
@@ -240,7 +252,8 @@ class Company:
                 urljoin(self.url, query(element, self.url_path)),
                 query(element, self.title_path).strip() or '?',
                 query(element, self.location_path).strip() or '?',
-                self._fuzzy_float(query(element, self.rooms_path)), self.directory.now())
+                self._fuzzy_float(query(element, self.rooms_path, optional=self.rooms_optional)),
+                self.directory.now())
             for element in elements]
 
     def _parse_json(self, data: bytes) -> list[Ad]:
@@ -252,21 +265,32 @@ class Company:
             raise ValueError(f'Bad document root type {type(root).__name__}')
 
         @overload
-        def query(value: object, field: str, cls: type[_T]) -> _T:
+        def query(value: object, field: str, cls: type[_T], *, optional: bool = False) -> _T:
             pass
         @overload
-        def query(value: object, field: str,
-                  cls: tuple[type[_T], type[_U], type[_V]]) -> _T | _U | _V:
+        def query(
+            value: object, field: str, cls: tuple[type[_T], type[_U], type[_V]], *,
+            optional: bool = False
+        ) -> _T | _U | _V:
             pass
-        def query(value: object, field: str,
-                  cls: type[_T] | tuple[type[_T], type[_U], type[_V]]) -> _T | _U | _V:
+        def query(
+            value: object, field: str, cls: type[_T] | tuple[type[_T], type[_U], type[_V]], *,
+            optional: bool = False
+        ) -> _T | _U | _V:
             path, pattern = self._parse_field(field)
-            value = query_json(value, path, cls)[0]
-            if pattern:
-                if not isinstance(value, str):
-                    raise LookupError(f'No {pattern} in {value}')
-                value = self._query_pattern(value, pattern)
-            return cast('_T | _U | _V', value)
+            try:
+                value = query_json(value, path, cls)[0]
+                if pattern:
+                    if not isinstance(value, str):
+                        raise LookupError(f'No {pattern} in {value}')
+                    value = self._query_pattern(value, pattern)
+                return cast('_T | _U | _V', value)
+            except LookupError:
+                if optional:
+                    value = ''
+                    assert isinstance(value, cls)
+                    return cast('_T | _U | _V', value)
+                raise
 
         values = cast(list[dict[str, object]], query_json(root, self.ad_path, dict))
         return [
@@ -274,7 +298,8 @@ class Company:
                 urljoin(self.url, query(value, self.url_path, str)),
                 query(value, self.title_path, str).strip() or '?',
                 query(value, self.location_path, str).strip() or '?',
-                self._fuzzy_float(query(value, self.rooms_path, (str, int, float))),
+                self._fuzzy_float(
+                    query(value, self.rooms_path, (str, int, float), optional=self.rooms_optional)),
                 self.directory.now())
             for value in values]
 

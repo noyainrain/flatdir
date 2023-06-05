@@ -61,9 +61,15 @@ def main(*args: str) -> int:
     for name, options in config.items():
         if name.startswith('company:'):
             try:
+                rooms_optional = options.getboolean('rooms_optional', False)
+            except ValueError:
+                logger.critical('Failed to load config file %s ([%s] Bad rooms_optional type)',
+                                config_path, name)
+                return 1
+            try:
                 company = Company(
                     options['url'], options['ad_path'], options['url_path'], options['title_path'],
-                    options['location_path'], options['rooms_path'],
+                    options['location_path'], options['rooms_path'], rooms_optional=rooms_optional,
                     location_filter=cast(str, options.get('location_filter', '')))
             except KeyError as e:
                 logger.critical('Failed to load config file %s ([%s] Missing %s)', config_path,
