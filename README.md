@@ -39,5 +39,6 @@ Come join [#flatdir🏠 on the Feini Discord server](https://discord.gg/h7yk8gNd
 * Sven Pfaller &lt;sven AT inrain.org>
 * Philipp Millar &lt;philipp.millar AT poxar.net>
 * Luna &lt;ciubix8514 AT gmail.com>
+* l3d00m &lt;github AT kxlion.de>
 
 Copyright (c) 2023 flatdir contributors
