@@ -95,6 +95,16 @@ class CompanyTest(TestCase):
         ads = company.query()
         self.assertEqual(ads, self.expected_ads(company.url, self.NOW))
 
+    def test_query_base(self) -> None:
+        company = Company(f'http://localhost:{self.PORT}/base.html', "body", 'a/@href', 'a',
+                          'span[1]', 'span[2]', 'span[3]')
+        directory = Directory([company], data_path=self.data_path)
+        directory.now = lambda: self.NOW # type: ignore[method-assign]
+
+        ads = company.query()
+        self.assertTrue(ads)
+        self.assertEqual(ads[0].url, f'http://localhost:{self.PORT}/ads/kreuzberg.html')
+
     def test_query_json(self) -> None:
         company = Company(f'http://localhost:{self.PORT}/ads.json', 'ads.*', 'url', 'title',
                           'location:[^,]*', 'rooms', 'rent')
