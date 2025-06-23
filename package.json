@@ -9,6 +9,6 @@
         }
     },
     "dependencies": {
-        "@fontsource/noto-sans": "^4.5"
+        "@fontsource/noto-sans": "^5.2"
     }
 }
