@@ -1,4 +1,4 @@
-name: Check code
+name: Check Code
 on:
     - push
     - pull_request
@@ -10,14 +10,16 @@ jobs:
                     - "3.9"
                     - "3.10"
                     - "3.11"
+                    - "3.12"
+                    - "3.13"
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
             - uses: actions/setup-python@v4
               with:
                   python-version: ${{ matrix.python }}
-            - run: make deps deps-dev
+            - run: make dependencies dependencies-dev
             - run: make type
             - run: make test
-            - run: make lint
+            - run: make lint PYLINTFLAGS=--output-format=github
               continue-on-error: ${{ contains(github.event.head_commit.message, 'WIP') }}

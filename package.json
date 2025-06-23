@@ -1,4 +1,13 @@
 {
+    "scripts": {
+        "dependencies": "mkdir -p flatdir/res/fonts/files && cp $npm_package_config_vendored_root flatdir/res/fonts/ && cp $npm_package_config_vendored_files flatdir/res/fonts/files/"
+    },
+    "config": {
+        "vendored": {
+            "root": "node_modules/@fontsource/noto-sans/400.css node_modules/@fontsource/noto-sans/600.css",
+            "files": "node_modules/@fontsource/noto-sans/files/noto-sans-*-400-normal.woff2 node_modules/@fontsource/noto-sans/files/noto-sans-all-400-normal.woff node_modules/@fontsource/noto-sans/files/noto-sans-*-600-normal.woff2 node_modules/@fontsource/noto-sans/files/noto-sans-all-600-normal.woff"
+        }
+    },
     "dependencies": {
         "@fontsource/noto-sans": "^4.5"
     }
