@@ -1,4 +1,5 @@
 PYTHON=python3
+PYTHONFLAGS=-W error
 PIP=pip3
 PIPFLAGS=--upgrade
 PYLINTFLAGS=
@@ -7,11 +8,11 @@ NPMFLAGS=--no-save
 
 .PHONY: test
 test:
-	$(PYTHON) -m unittest
+	$(PYTHON) $(PYTHONFLAGS) -m unittest
 
 .PHONY: type
 type:
-	mypy flatdir
+	mypy
 
 .PHONY: lint
 lint:
@@ -20,27 +21,19 @@ lint:
 .PHONY: check
 check: type test lint
 
-.PHONY: deps
-deps:
-	$(PIP) install $(PIPFLAGS) --requirement requirements.txt
+.PHONY: dependencies
+dependencies:
+	$(PIP) install $(PIPFLAGS) --requirement=requirements.txt
 
-.PHONY: deps-dev
-deps-dev:
-	$(PIP) install $(PIPFLAGS) --requirement requirements-dev.txt
+.PHONY: dependencies-dev
+dependencies-dev:
+	$(PIP) install $(PIPFLAGS) --requirement=requirements-dev.txt
 
-FONTSMODULE=node_modules/@fontsource/noto-sans
-FONTSRESOURCE=flatdir/res/fonts
 .PHONY: fonts
 fonts:
 	@# Work around npm 7 update modifying package.json (see https://github.com/npm/cli/issues/3044)
 	$(NPM) install $(NPMFLAGS)
-	mkdir --parents $(FONTSRESOURCE)/files
-	cp $(FONTSMODULE)/400.css $(FONTSMODULE)/600.css $(FONTSRESOURCE)/
-	cp $(FONTSMODULE)/files/noto-sans-*-400-normal.woff2 \
-	    $(FONTSMODULE)/files/noto-sans-all-400-normal.woff \
-	    $(FONTSMODULE)/files/noto-sans-*-600-normal.woff2 \
-	    $(FONTSMODULE)/files/noto-sans-all-600-normal.woff $(FONTSRESOURCE)/files/
 
 .PHONY: clean
 clean:
-	rm --recursive --force $$(find . -name __pycache__) .mypy_cache node_modules
+	rm -rf $$(find . -name __pycache__) .mypy_cache node_modules

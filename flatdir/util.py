@@ -26,8 +26,9 @@ import sys
 from typing import Iterable, Literal, TextIO, TypeVar, cast, overload
 from xml.etree.ElementTree import Element
 
-if sys.version_info <= (3, 11):
-    # Work around https://github.com/pylint-dev/pylint/issues/9533
+if sys.version_info < (3, 11):
+    # Work around Pylint rejecting deprecated features in compatibility code (see
+    # https://github.com/pylint-dev/pylint/issues/9533)
     # pylint: disable=deprecated-class
     from importlib.abc import Traversable
 else:

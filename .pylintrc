@@ -1,8 +1,0 @@
-[main]
-disable =
-    # Good design is best figured out by humans yet
-    design, too-many-lines, too-many-nested-blocks,
-    # Handled by mypy
-    classes, typecheck
-jobs = 0
-output-format = colorized
