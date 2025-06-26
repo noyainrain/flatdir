@@ -35,6 +35,7 @@ fonts:
 	$(NPM) install $(NPMFLAGS)
 	# OQ should we delete this before update? to make sure old files get deleted correctly?
 	# hhmmmm...
+	# TODO this also applies to the update process of the flatdir data/web directory... hm...
 
 .PHONY: clean
 clean:
