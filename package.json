@@ -4,11 +4,11 @@
     },
     "config": {
         "vendored": {
-            "root": "node_modules/@fontsource/noto-sans/400.css node_modules/@fontsource/noto-sans/600.css",
-            "files": "node_modules/@fontsource/noto-sans/files/noto-sans-*-400-normal.woff2 node_modules/@fontsource/noto-sans/files/noto-sans-all-400-normal.woff node_modules/@fontsource/noto-sans/files/noto-sans-*-600-normal.woff2 node_modules/@fontsource/noto-sans/files/noto-sans-all-600-normal.woff"
+            "root": "node_modules/@fontsource-variable/noto-sans/wght.css",
+            "files": "node_modules/@fontsource-variable/noto-sans/files/noto-sans-*-wght-normal.woff2"
         }
     },
     "dependencies": {
-        "@fontsource/noto-sans": "^4.5"
+        "@fontsource-variable/noto-sans": "^5.2"
     }
 }
