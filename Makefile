@@ -4,7 +4,7 @@ PIP=pip3
 PIPFLAGS=--upgrade
 PYLINTFLAGS=
 NPM=npm
-NPMFLAGS=--no-save
+NPMFLAGS=--no-package-lock
 
 .PHONY: test
 test:
@@ -31,8 +31,8 @@ dependencies-dev:
 
 .PHONY: fonts
 fonts:
-	@# Work around npm 7 update modifying package.json (see https://github.com/npm/cli/issues/3044)
-	$(NPM) install $(NPMFLAGS)
+	@# Node.js >= 18.19 is required
+	$(NPM) update $(NPMFLAGS)
 
 .PHONY: clean
 clean:

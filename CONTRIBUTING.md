@@ -24,7 +24,7 @@ A good issue description contains:
 To install all development dependencies, run:
 
 ```sh
-make deps-dev
+make dependencies-dev
 ```
 
 ## Running Code Checks
@@ -35,7 +35,7 @@ To run all unit tests, use:
 make
 ```
 
-All available code checks (type, test and style) can be run with:
+All available code checks can be run with:
 
 ```sh
 make check

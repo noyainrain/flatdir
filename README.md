@@ -8,7 +8,7 @@ You can give it a try at [berlin.flat.directory](https://berlin.flat.directory).
 
 The following software must be installed on your system:
 
-* Python >= 3.9
+* Python >= 3.11
 
 flatdir should work on any [POSIX](https://en.wikipedia.org/wiki/POSIX) system.
 
@@ -17,7 +17,7 @@ flatdir should work on any [POSIX](https://en.wikipedia.org/wiki/POSIX) system.
 To install all dependencies, run:
 
 ```sh
-make deps
+make dependencies
 ```
 
 ## Running flatdir
@@ -32,13 +32,13 @@ See `flatdir/res/default.ini` for config file documentation.
 
 ## Community
 
-Come join [#flatdir🏠 on the Feini Discord server](https://discord.gg/h7yk8gNdrA)!
+Come join [#flatdir🏠 on The Joy of Programming Discord server](https://discord.gg/h7yk8gNdrA)!
 
 ## Contributors
 
-* Sven Pfaller &lt;sven AT inrain.org>
-* Philipp Millar &lt;philipp.millar AT poxar.net>
-* Luna &lt;ciubix8514 AT gmail.com>
-* l3d00m &lt;github AT kxlion.de>
+* Sven Pfaller &lt;sven@inrain.org>
+* Philipp Millar &lt;philipp.millar@poxar.net>
+* Luna &lt;ciubix8514@gmail.com>
+* l3d00m &lt;github@kxlion.de>
 
 Copyright (c) 2023 flatdir contributors

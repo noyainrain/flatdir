@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from enum import Enum
+from importlib.resources.abc import Traversable
 from itertools import chain
 import logging
 from logging import Formatter, LogRecord, StreamHandler
@@ -25,14 +26,6 @@ from pathlib import Path
 import sys
 from typing import Iterable, Literal, TextIO, TypeVar, cast, overload
 from xml.etree.ElementTree import Element
-
-if sys.version_info < (3, 11):
-    # Work around Pylint rejecting deprecated features in compatibility code (see
-    # https://github.com/pylint-dev/pylint/issues/9533)
-    # pylint: disable=deprecated-class
-    from importlib.abc import Traversable
-else:
-    from importlib.resources.abc import Traversable
 
 FormatStyle = Literal['%', '{', '$']
 

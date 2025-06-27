@@ -14,4 +14,4 @@ disable = [
 ]
 jobs = 0
 output-format = "colorized"
-py-version = "3.9"
+py-version = "3.11"
