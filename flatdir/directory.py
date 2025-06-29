@@ -47,7 +47,7 @@ class Ad:
 
     .. attribute:: location
 
-       Location of the flat.
+       Coarse location of the flat, i.e. district or city.
 
     .. attribute:: rooms
 
@@ -100,7 +100,7 @@ class Company:
 
     .. attribute:: location_path
 
-       Location field of an ad.
+       Field containing the coarse location of a flat, i.e. district or city.
 
     .. attribute:: rooms_path
 

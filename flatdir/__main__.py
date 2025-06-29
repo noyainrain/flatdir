@@ -37,7 +37,7 @@ def main(*args: str) -> int:
     ns = parser.parse_args(args[1:], namespace=_Namespace())
 
     res = resources.files(f'{__package__}.res')
-    config = ConfigParser(strict=False)
+    config = ConfigParser(strict=False, interpolation=None)
     with (res / 'default.ini').open(encoding='utf-8') as f:
         config.read_file(f)
 
