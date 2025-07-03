@@ -3,6 +3,8 @@
 from datetime import datetime, timedelta
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from importlib import resources
+import locale
+from locale import setlocale
 import logging
 from pathlib import Path
 from socket import socket
@@ -46,8 +48,12 @@ class TestCase(unittest.TestCase):
         # pylint: disable=consider-using-with
         self._dir = TemporaryDirectory()
         self.data_path = Path(self._dir.name)
+        # TODO is it really cool to set the locale in tests? also expecting another locale to be
+        # installed is kinda fishy, dont think we can do anything but C here, right?
+        # setlocale(locale.LC_NUMERIC, 'de_DE.utf8')
 
     def tearDown(self) -> None:
+        # setlocale(locale.LC_NUMERIC, 'C')
         self._dir.cleanup()
 
     def expected_ads(self, company_url: str, time: datetime) -> list[Ad]:
