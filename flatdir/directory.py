@@ -1,9 +1,5 @@
 """Flat ad directory logic."""
 
-# 1) [x] happy new year commit
-# 2) [ ] dependency updates
-# 3) [ ] Respect base tags
-
 from __future__ import annotations
 
 import csv
@@ -276,24 +272,17 @@ class Company:
 
         # Unfortunately strict parsing fails for most real-world companies
         tree = html5lib.parse(data, namespaceHTMLElements=False)
-
-        #url = self.url
-        #base = next(iter(query_xml(tree, './/base')), None)
-        #if base is not None:
-        #    href = base.get('href')
-        #    if href:
-        #        url = urljoin(url, href)
-
-        # Alt:
         try:
-            url = urljoin(self.url, query_xml(tree, './/base')[0].attrib['href'])
-        except (IndexError, KeyError):
-            url = self.url
+            # Only the first base tag with an href attribute is considered (see
+            # https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/base#multiple_base_elements)
+            base_url = urljoin(self.url, query_xml(tree, './/base[@href]')[0].attrib['href'])
+        except IndexError:
+            base_url = self.url
 
         elements = query_xml(tree, self.ad_path)
         return [
             Ad(
-                urljoin(url, query(element, self.url_path)),
+                urljoin(base_url, query(element, self.url_path)),
                 query(element, self.title_path).strip() or '?',
                 query(element, self.location_path).strip() or '?',
                 self._fuzzy_float(query(element, self.rooms_path, optional=self.rooms_optional)),
