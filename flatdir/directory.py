@@ -195,6 +195,8 @@ class Company:
     def query(self) -> list[Ad]:
         """Query current ads.
 
+        Numbers are parsed according to the current locale.
+
         If there is a problem communicating with the company, a :exc:`urllib.error.URLError` is
         raised. If there is a problem parsing the ads, a :exc:`LookupError` or :exc:`ValueError` is
         raised.
@@ -327,15 +329,15 @@ class Company:
     def _fuzzy_float(value: str | int | float) -> float:
         if isinstance(value, (int, float)):
             return float(value)
-        conv = cast(dict[str, str], localeconv())
-        decimal, grouping = re.escape(conv['decimal_point']), re.escape(conv['thousands_sep'])
-        match = re.search(rf'[\d{grouping}]+({decimal}\d+)?', value)
+        conv = localeconv()
+        decimal = re.escape(conv['decimal_point'])
+        group = re.escape(conv['thousands_sep'])
+        # Simplified float() grammar
+        match = re.search(rf'\d[{group}\d]*({decimal}\d+)?', value)
         return atof(match[0]) if match else .0
 
 class Directory:
     """Directory of available flats from different real estate companies.
-
-       Numbers are parsed according to the current locale.
 
     .. attribute:: companies
 
