@@ -6,9 +6,11 @@ You can give it a try at [berlin.flat.directory](https://berlin.flat.directory).
 
 ## System Requirements
 
-The following software must be installed on your system:
+The following software must be installed:
 
 * Python >= 3.11
+
+If a locale is configured, it has to be available on your system (e.g. `de_DE.UTF-8` for Berlin).
 
 flatdir should work on any [POSIX](https://en.wikipedia.org/wiki/POSIX) system.
 

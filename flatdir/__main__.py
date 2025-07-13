@@ -6,6 +6,8 @@ from argparse import ArgumentParser
 from configparser import ConfigParser, ParsingError
 from dataclasses import dataclass
 from importlib import resources
+import locale
+from locale import LC_NUMERIC, setlocale
 import logging
 from logging import getLogger
 from pathlib import Path
@@ -81,12 +83,21 @@ def main(*args: str) -> int:
             companies.append(company)
 
     options = config['flatdir']
+    directory_locale = options['locale']
+    try:
+        setlocale(LC_NUMERIC, directory_locale)
+    except locale.Error:
+        logger.critical('Failed to load config file %s ([flatdir] Unknown locale %s)', config_path,
+                        directory_locale)
+        return 1
+
     try:
         directory = Directory(companies, title=options['title'], description=options['description'],
                               extra=options['extra'], data_path=options['data_path'])
     except ValueError as e:
         logger.critical('Failed to load config file %s ([flatdir] %s)', config_path, e)
         return 1
+
     url = options['url']
     components = urlsplit(url)
     if not (components.scheme and components.hostname):
@@ -104,6 +115,7 @@ def main(*args: str) -> int:
         directory.data_path.mkdir(exist_ok=True)
         directory.update()
 
+        setlocale(LC_NUMERIC, 'C')
         web_path = directory.data_path / 'web'
         web_path.mkdir(exist_ok=True)
         copy_resource(res / 'fonts', web_path / 'fonts')

@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 import json
 from json import JSONDecodeError
+from locale import atof, localeconv
 from logging import getLogger
 from os import PathLike
 from pathlib import Path
@@ -194,6 +195,8 @@ class Company:
     def query(self) -> list[Ad]:
         """Query current ads.
 
+        Numbers are parsed according to the current locale.
+
         If there is a problem communicating with the company, a :exc:`urllib.error.URLError` is
         raised. If there is a problem parsing the ads, a :exc:`LookupError` or :exc:`ValueError` is
         raised.
@@ -324,10 +327,14 @@ class Company:
 
     @staticmethod
     def _fuzzy_float(value: str | int | float) -> float:
-        if isinstance(value, str):
-            match = re.search(r'\d+(\.\d+)?', value)
-            value = match[0] if match else 0
-        return float(value)
+        if isinstance(value, (int, float)):
+            return float(value)
+        conv = localeconv()
+        decimal = re.escape(conv['decimal_point'])
+        group = re.escape(conv['thousands_sep'])
+        # Simplified float() grammar
+        match = re.search(rf'\d[{group}\d]*({decimal}\d+)?', value)
+        return atof(match[0]) if match else .0
 
 class Directory:
     """Directory of available flats from different real estate companies.
