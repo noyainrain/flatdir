@@ -7,7 +7,7 @@ from configparser import ConfigParser, ParsingError
 from dataclasses import dataclass
 from importlib import resources
 import locale
-from locale import LC_NUMERIC, setlocale
+from locale import LC_NUMERIC, LC_MONETARY, setlocale
 import logging
 from logging import getLogger
 from pathlib import Path
@@ -71,7 +71,8 @@ def main(*args: str) -> int:
             try:
                 company = Company(
                     options['url'], options['ad_path'], options['url_path'], options['title_path'],
-                    options['location_path'], options['rooms_path'], rooms_optional=rooms_optional,
+                    options['location_path'], options['rooms_path'], options['rent_field'],
+                    rooms_optional=rooms_optional,
                     location_filter=cast(str, options.get('location_filter', '')))
             except KeyError as e:
                 logger.critical('Failed to load config file %s ([%s] Missing %s)', config_path,
@@ -86,6 +87,7 @@ def main(*args: str) -> int:
     directory_locale = options['locale']
     try:
         setlocale(LC_NUMERIC, directory_locale)
+        setlocale(LC_MONETARY, directory_locale)
     except locale.Error:
         logger.critical('Failed to load config file %s ([flatdir] Unknown locale %s)', config_path,
                         directory_locale)
@@ -116,6 +118,7 @@ def main(*args: str) -> int:
         directory.update()
 
         setlocale(LC_NUMERIC, 'C')
+        setlocale(LC_MONETARY, 'C')
         web_path = directory.data_path / 'web'
         web_path.mkdir(exist_ok=True)
         copy_resource(res / 'fonts', web_path / 'fonts')

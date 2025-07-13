@@ -4,12 +4,14 @@
             "url": "mitte.html",
             "title": "Luxurious Lodge",
             "location": "Mitte, Berlin",
-            "rooms": 7
+            "rooms": 7,
+            "rent": 2000
         }, {
             "url": "kreuzberg.html",
             "title": "Cozy Cottage",
             "location": "Kreuzberg, Berlin",
-            "rooms": "Almost 1.5"
+            "rooms": "Almost 1.5",
+            "rent": 499.99
         }
     ]
 }

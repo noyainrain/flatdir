@@ -52,8 +52,9 @@ class TestCase(unittest.TestCase):
 
     def expected_ads(self, company_url: str, time: datetime) -> list[Ad]:
         return [
-            Ad(urljoin(company_url, 'mitte.html'), 'Luxurious Lodge', 'Mitte', 7, time),
-            Ad(urljoin(company_url, 'kreuzberg.html'), 'Cozy Cottage', 'Kreuzberg', 1.5, time)
+            Ad(urljoin(company_url, 'mitte.html'), 'Luxurious Lodge', 'Mitte', 7, 2000, time),
+            Ad(urljoin(company_url, 'kreuzberg.html'), 'Cozy Cottage', 'Kreuzberg', 1.5, 499.99,
+               time)
         ]
 
     def assertEqual(self, first: object, second: object, msg: object = None) -> None:
@@ -64,7 +65,7 @@ class CompanyTest(TestCase):
 
     def test_update(self) -> None:
         company = Company(f'http://localhost:{self.PORT}/index.html', ".//li[@class='ad']",
-                          'a/@href', 'a', 'span[1]:[^,]*', 'span[2]')
+                          'a/@href', 'a', 'span[1]:[^,]*', 'span[2]', 'span[3]')
         directory = Directory([company], data_path=self.data_path)
         directory.now = lambda: self.NOW # type: ignore[method-assign]
 
@@ -75,7 +76,7 @@ class CompanyTest(TestCase):
 
     def test_update_stored_ads(self) -> None:
         company = Company(f'http://localhost:{self.PORT}/index.html', ".//li[@class='ad']",
-                          'a/@href', 'a', 'span[1]:[^,]*', 'span[2]')
+                          'a/@href', 'a', 'span[1]:[^,]*', 'span[2]', 'span[3]')
         directory = Directory([company], data_path=self.data_path)
         directory.now = lambda: self.NOW # type: ignore[method-assign]
         company.update()
@@ -87,7 +88,7 @@ class CompanyTest(TestCase):
 
     def test_query(self) -> None:
         company = Company(f'http://localhost:{self.PORT}/index.html', ".//li[@class='ad']",
-                          'a/@href', 'a', 'span[1]:[^,]*', 'span[2]')
+                          'a/@href', 'a', 'span[1]:[^,]*', 'span[2]', 'span[3]')
         directory = Directory([company], data_path=self.data_path)
         directory.now = lambda: self.NOW # type: ignore[method-assign]
 
@@ -96,7 +97,7 @@ class CompanyTest(TestCase):
 
     def test_query_json(self) -> None:
         company = Company(f'http://localhost:{self.PORT}/ads.json', 'ads.*', 'url', 'title',
-                          'location:[^,]*', 'rooms')
+                          'location:[^,]*', 'rooms', 'rent')
         directory = Directory([company], data_path=self.data_path)
         directory.now = lambda: self.NOW # type: ignore[method-assign]
 
@@ -105,7 +106,7 @@ class CompanyTest(TestCase):
 
     def test_query_missing_element(self) -> None:
         directory = Directory(
-            [Company(f'http://localhost:{self.PORT}/index.html', './/li', 'p', '', '', '')],
+            [Company(f'http://localhost:{self.PORT}/index.html', './/li', 'p', '', '', '', '')],
             data_path=self.data_path)
         company = directory.companies[0]
         with self.assertRaisesRegex(LookupError, 'p'):
@@ -113,7 +114,7 @@ class CompanyTest(TestCase):
 
     def test_query_communication_error(self) -> None:
         directory = Directory(
-            [Company(f'http://localhost:{self.PORT}/foo', '', '', '', '', '')],
+            [Company(f'http://localhost:{self.PORT}/foo', '', '', '', '', '', '')],
             data_path=self.data_path)
         company = directory.companies[0]
         with self.assertRaises(OSError):
@@ -123,10 +124,10 @@ class DirectoryTest(TestCase):
     def test_update(self) -> None:
         companies = [
             Company(f'http://happy.localhost:{self.PORT}/index.html', ".//li[@class='ad']",
-                    'a/@href', 'a', 'span[1]:[^,]*', 'span[2]'),
+                    'a/@href', 'a', 'span[1]:[^,]*', 'span[2]', 'span[3]'),
             Company(f'http://grumpy.localhost:{self.PORT}/ads.json', 'ads.*', 'url', 'title',
-                    'location:[^,]*', 'rooms'),
-            Company(f'http://long.localhost:{self.PORT}/foo', '', '', '', '', '')
+                    'location:[^,]*', 'rooms', 'rent'),
+            Company(f'http://long.localhost:{self.PORT}/foo', '', '', '', '', '', '')
         ]
         directory = Directory(companies, data_path=self.data_path)
         directory.now = lambda: datetime(2023, 2, 3, 20) # type: ignore[method-assign]

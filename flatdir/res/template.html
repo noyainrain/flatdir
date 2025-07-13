@@ -209,6 +209,9 @@
                                     rooms
                                 {% endif %}
                             </li>
+                            <li class="tag">
+                                {{ directory.currency }}{{ '{:.2f}'.format(ad.rent) }}
+                            </li>
                         </ul>
                         <aside>{{ '{:%d %b %Y}'.format(ad.time) }} from {{ ad.host }}</aside>
                     </a>

@@ -54,6 +54,10 @@ class Ad:
 
        Number of rooms of the flat.
 
+    .. attribute:: rent
+
+       Amount of rent for the flat.
+
     .. attribute:: time
 
        Publication time.
@@ -63,6 +67,7 @@ class Ad:
     title: str
     location: str
     rooms: float
+    rent: float
     time: datetime
 
     def __post_init__(self) -> None:
@@ -107,6 +112,10 @@ class Company:
 
        Rooms field of an ad.
 
+    .. attribute:: rent_field
+
+       Field containing the amount of rent for a flat
+
     .. attribute:: rooms_optional
 
        Indicates that ads without a rooms field should be ignored.
@@ -126,7 +135,7 @@ class Company:
 
     def __init__(
         self, url: str, ad_path: str, url_path: str, title_path: str, location_path: str,
-        rooms_path: str, *, rooms_optional: bool = False, location_filter: str = ''
+        rooms_path: str, rent_field: str, *, rooms_optional: bool = False, location_filter: str = ''
     ) -> None:
         components = urlsplit(url)
         if not (components.scheme and components.hostname):
@@ -138,6 +147,7 @@ class Company:
         self.title_path = title_path
         self.location_path = location_path
         self.rooms_path = rooms_path
+        self.rent_field = rent_field
         self.rooms_optional = rooms_optional
         self.location_filter = location_filter
 
@@ -171,8 +181,15 @@ class Company:
         try:
             with self._ads_path.open(encoding='utf-8') as f:
                 return [
-                    Ad(row['url'], row['title'], row['location'], float(row['rooms']),
-                       datetime.fromisoformat(row['time']))
+                    Ad(
+                        row['url'],
+                        row['title'],
+                        row['location'],
+                        float(row['rooms']),
+                        # Update rent (0.6)
+                        float(row.get('rent', '0')),
+                        datetime.fromisoformat(row['time'])
+                    )
                     for row in cast(Iterable[dict[str, str]], csv.DictReader(f))]
         except FileNotFoundError:
             return []
@@ -183,11 +200,17 @@ class Company:
         ads = [dataclasses.replace(ad, time=old_ads.get(ad.url, ad).time) for ad in self.query()]
 
         with self._ads_path.open('w', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, ['url', 'title', 'location', 'rooms', 'time'])
+            writer = csv.DictWriter(f, ['url', 'title', 'location', 'rooms', 'rent', 'time'])
             writer.writeheader()
             for ad in ads:
-                row = {'url': ad.url, 'title': ad.title, 'location': ad.location, 'rooms': ad.rooms,
-                       'time': ad.time.isoformat()}
+                row = {
+                    'url': ad.url,
+                    'title': ad.title,
+                    'location': ad.location,
+                    'rooms': ad.rooms,
+                    'rent': ad.rent,
+                    'time': ad.time.isoformat()
+                }
                 writer.writerow(row)
 
         return ads
@@ -256,7 +279,7 @@ class Company:
                 query(element, self.title_path).strip() or '?',
                 query(element, self.location_path).strip() or '?',
                 self._fuzzy_float(query(element, self.rooms_path, optional=self.rooms_optional)),
-                self.directory.now())
+                self._fuzzy_float(query(element, self.rent_field)), self.directory.now())
             for element in elements]
 
     def _parse_json(self, data: bytes) -> list[Ad]:
@@ -303,6 +326,7 @@ class Company:
                 query(value, self.location_path, str).strip() or '?',
                 self._fuzzy_float(
                     query(value, self.rooms_path, (str, int, float), optional=self.rooms_optional)),
+                self._fuzzy_float(query(value, self.rent_field, (str, int, float))),
                 self.directory.now())
             for value in values]
 
@@ -339,6 +363,8 @@ class Company:
 class Directory:
     """Directory of available flats from different real estate companies.
 
+    :attr:`currency` is determined from the current locale.
+
     .. attribute:: companies
 
        Source real estate companies.
@@ -354,6 +380,10 @@ class Directory:
     .. attribute:: extra
 
        Any extra information about the directory as HTML.
+
+    .. attribute:: currency
+
+       Sign of the currency in use.
 
     .. attribute:: data_directory
 
@@ -372,6 +402,8 @@ class Directory:
         if not self.description:
             raise ValueError('Blank description')
         self.extra = (extra.strip() or None) if extra else None
+        self.currency = localeconv()['currency_symbol'] or '¤'
+
         self.data_path = Path(data_path)
 
         self.companies = list(companies)
