@@ -273,7 +273,7 @@ class Company:
         # Unfortunately strict parsing fails for most real-world companies
         tree = html5lib.parse(data, namespaceHTMLElements=False)
         try:
-            # Only the first base tag with an href attribute is considered (see
+            # The first base tag with an href attribute is decisive (see
             # https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/base#multiple_base_elements)
             base_url = urljoin(self.url, query_xml(tree, './/base[@href]')[0].attrib['href'])
         except IndexError:

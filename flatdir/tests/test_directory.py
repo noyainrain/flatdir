@@ -1,5 +1,6 @@
 # pylint: disable=missing-docstring
 
+from collections.abc import Iterable
 from datetime import datetime, timedelta
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from importlib import resources
@@ -28,6 +29,7 @@ class TestCase(unittest.TestCase):
             pass
 
     PORT = 16160
+    NOW = datetime(2023, 2, 3, 20)
 
     _server: ClassVar[HTTPServer]
 
@@ -50,6 +52,19 @@ class TestCase(unittest.TestCase):
     def tearDown(self) -> None:
         self._dir.cleanup()
 
+    def company(
+        self, *, url: str = f'http://localhost:{PORT}/index.html',
+        ad_path: str = ".//li[@class='ad']", url_path: str = 'a/@href', title_path: str = 'a',
+        location_path: str = 'span[1]:[^,]*', rooms_path: str = 'span[2]',
+        rent_field: str = 'span[3]'
+    ) -> Company:
+        return Company(url, ad_path, url_path, title_path, location_path, rooms_path, rent_field)
+
+    def directory(self, companies: Iterable[Company]) -> Directory:
+        directory = Directory(companies, data_path=self.data_path)
+        directory.now = lambda: self.NOW # type: ignore[method-assign]
+        return directory
+
     def expected_ads(self, company_url: str, time: datetime) -> list[Ad]:
         return [
             Ad(urljoin(company_url, 'mitte.html'), 'Luxurious Lodge', 'Mitte', 7, 2000, time),
@@ -61,8 +76,6 @@ class TestCase(unittest.TestCase):
         super().assertEqual(first, second, msg=msg)
 
 class CompanyTest(TestCase):
-    NOW = datetime(2023, 2, 3, 20)
-
     def test_update(self) -> None:
         company = Company(f'http://localhost:{self.PORT}/index.html', ".//li[@class='ad']",
                           'a/@href', 'a', 'span[1]:[^,]*', 'span[2]', 'span[3]')
@@ -96,10 +109,8 @@ class CompanyTest(TestCase):
         self.assertEqual(ads, self.expected_ads(company.url, self.NOW))
 
     def test_query_base_url(self) -> None:
-        company = Company(f'http://localhost:{self.PORT}/base.html', "body", 'a/@href', 'a',
-                          'span[1]', 'span[2]', 'span[3]')
-        directory = Directory([company], data_path=self.data_path)
-        directory.now = lambda: self.NOW # type: ignore[method-assign]
+        company = self.company(url=f'http://localhost:{self.PORT}/base.html', ad_path='body')
+        self.directory([company])
 
         ads = company.query()
         self.assertTrue(ads)
@@ -133,14 +144,14 @@ class CompanyTest(TestCase):
 class DirectoryTest(TestCase):
     def test_update(self) -> None:
         companies = [
-            Company(f'http://happy.localhost:{self.PORT}/index.html', ".//li[@class='ad']",
-                    'a/@href', 'a', 'span[1]:[^,]*', 'span[2]', 'span[3]'),
-            Company(f'http://grumpy.localhost:{self.PORT}/ads.json', 'ads.*', 'url', 'title',
-                    'location:[^,]*', 'rooms', 'rent'),
-            Company(f'http://long.localhost:{self.PORT}/foo', '', '', '', '', '', '')
+            self.company(url=f'http://happy.localhost:{self.PORT}/index.html'),
+            self.company(
+                url=f'http://grumpy.localhost:{self.PORT}/ads.json', ad_path='ads.*',
+                url_path='url', title_path='title', location_path='location:[^,]*',
+                rooms_path='rooms', rent_field='rent'),
+            self.company(url=f'http://long.localhost:{self.PORT}/foo')
         ]
-        directory = Directory(companies, data_path=self.data_path)
-        directory.now = lambda: datetime(2023, 2, 3, 20) # type: ignore[method-assign]
+        directory = self.directory(companies)
 
         directory.update()
         ads = directory.get_ads()
