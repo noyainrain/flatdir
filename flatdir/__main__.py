@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 
 from jinja2 import Environment, PackageLoader
 
-from .directory import Company, Directory
+from .directory import Company, Directory, VERSION
 from .util import color_stream_handler, copy_resource
 
 @dataclass
@@ -124,7 +124,7 @@ def main(*args: str) -> int:
         copy_resource(res / 'fonts', web_path / 'fonts')
         copy_resource(res / 'images', web_path / 'images')
         html = template.render(directory=directory, companies=companies, ads=directory.get_ads(),
-                               url=url)
+                               url=url, version=VERSION)
         index_path = web_path / 'index.html'
         index_path.write_text(html)
     except OSError as e:

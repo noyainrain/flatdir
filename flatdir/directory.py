@@ -1,4 +1,9 @@
-"""Flat ad directory logic."""
+"""Flat ad directory logic.
+
+.. data:: VERSION
+
+   Current version.
+"""
 
 from __future__ import annotations
 
@@ -25,6 +30,8 @@ from xml.etree.ElementTree import Element
 import html5lib
 
 from .util import query_json, query_xml
+
+VERSION = '0.6.1'
 
 _T = TypeVar('_T')
 _U = TypeVar('_U')
