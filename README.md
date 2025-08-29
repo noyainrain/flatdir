@@ -43,4 +43,4 @@ Come join [#flatdir🏠 on The Joy of Programming Discord server](https://discor
 * Luna &lt;ciubix8514@gmail.com>
 * l3d00m &lt;github@kxlion.de>
 
-Copyright (c) 2023 flatdir contributors
+Copyright (c) 2025 flatdir contributors
