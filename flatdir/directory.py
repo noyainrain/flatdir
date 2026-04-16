@@ -31,7 +31,7 @@ import html5lib
 
 from .util import query_json, query_xml
 
-VERSION = '0.6.2'
+VERSION = '0.6.3'
 
 _T = TypeVar('_T')
 _U = TypeVar('_U')
@@ -268,8 +268,9 @@ class Company:
                 try:
                     element = query_xml(element, path)[0]
                 except IndexError:
-                    xml = ElementTree.tostring(Element(element.tag, attrib=element.attrib),
-                                               encoding='unicode')
+                    # Serialize element without children
+                    element = Element(element.tag, attrib=element.attrib)
+                    xml = ElementTree.tostring(element, encoding='unicode')
                     raise LookupError(f'No {path} in {xml}') from None
                 return self._query_pattern(''.join(element.itertext()), pattern)
             except LookupError:
@@ -322,7 +323,7 @@ class Company:
                 if optional:
                     value = ''
                     assert isinstance(value, cls)
-                    return cast('_T | _U | _V', value)
+                    return value
                 raise
 
         values = cast(list[dict[str, object]], query_json(root, self.ad_path, dict))
