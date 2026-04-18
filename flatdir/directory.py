@@ -31,7 +31,7 @@ import html5lib
 
 from .util import query_json, query_xml
 
-VERSION = '0.6.3'
+VERSION = '0.6.4'
 
 _T = TypeVar('_T')
 _U = TypeVar('_U')
